@@ -1,0 +1,60 @@
+/* =========================================
+   MOBILE RESPONSIVENESS (Screens < 480px)
+   ========================================= */
+
+@media (max-width: 480px) {
+  #chat-widget-container {
+    bottom: 15px;
+    right: 15px;
+  }
+
+  /* 1. Make the window cover the whole screen */
+  #chat-window-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important; /* Remove curves for full-screen feel */
+    z-index: 9999;
+  }
+
+  /* 2. Fix the header for touch */
+  .chat-header {
+    padding: 20px 15px;
+    padding-top: env(safe-area-inset-top, 20px); /* iPhone Notch support */
+  }
+
+  /* 3. Hide the giant sprite when chat is open on mobile */
+  /* (It takes up 50% of the screen otherwise) */
+  #sprite-ask-container.chat-open {
+    display: none !important;
+  }
+
+  /* 4. Adjust message width for small screens */
+  .msg {
+    max-width: 90%;
+    font-size: 14px;
+  }
+
+  /* 5. Pin the input to the bottom of the screen */
+  .chat-input-area {
+    padding: 15px;
+    padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+  }
+
+  .chat-input-wrapper {
+    padding: 5px 5px 5px 15px;
+  }
+
+  /* 6. Ensure the window shows correctly when toggled */
+  #chat-window-popup.hidden {
+    transform: translateY(100%); /* Slide down instead of shrinking */
+    opacity: 0;
+  }
+}

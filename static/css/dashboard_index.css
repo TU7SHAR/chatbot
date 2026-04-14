@@ -1,0 +1,241 @@
+.bot-card.private-card {
+  border-color: #d93025;
+  box-shadow: 4px 4px 0 #d93025;
+}
+
+.bot-card.private-card.active {
+  background: #d93025;
+  color: #fff;
+  box-shadow: 0 0 0 #d93025;
+}
+
+.team-bot-card.private-card {
+  border-color: #d93025;
+}
+
+.team-bot-card.private-card.active {
+  background: #d93025;
+  color: #fff;
+  border-style: solid;
+}
+
+.key-copy-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px dashed #d93025;
+  padding: 6px;
+  margin-top: 10px;
+  background: #fff;
+  color: #d93025;
+}
+
+.bot-card.active .key-copy-box {
+  background: #000;
+}
+
+.copy-btn {
+  background: #d93025;
+  color: #fff;
+  border: 1px solid #d93025;
+  font-family: monospace;
+  font-size: 10px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.copy-btn:hover {
+  background: #b0241c;
+}
+/* --- LAYOUT & TYPOGRAPHY --- */
+.dashboard-title {
+  margin-bottom: 5px;
+}
+
+.org-subtitle {
+  margin-top: 0;
+  font-family: monospace;
+  font-size: 18px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.dashboard-instructions {
+  margin-top: 25px;
+}
+
+.solid-divider {
+  border: 1px solid #000;
+  margin: 20px 0;
+}
+
+.dashboard-grid {
+  display: flex;
+  gap: 40px;
+  margin-top: 30px;
+}
+
+.dashboard-column {
+  flex: 1;
+}
+
+.column-header {
+  border-bottom: 3px solid #000;
+  padding-bottom: 5px;
+}
+
+.bot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+/* --- MY BOT CARDS --- */
+.bot-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.bot-card {
+  border: 3px solid #000;
+  padding: 15px;
+  background: #fff;
+  box-shadow: 4px 4px 0 #000;
+  transition: transform 0.1s;
+}
+
+.bot-card.active {
+  background: #000;
+  color: #fff;
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 #000;
+}
+
+.bot-name {
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+/* --- ORG'S BOT CARDS --- */
+.team-bot-card {
+  border: 3px dashed #000;
+  padding: 15px;
+  background: #f4f4f4;
+  color: #000;
+  transition: transform 0.1s;
+}
+
+.team-bot-card.active {
+  background: #000;
+  color: #fff;
+  border-style: solid;
+  transform: translate(4px, 4px);
+}
+
+/* --- TEXT & STATUS ELEMENTS --- */
+.classified-text {
+  font-family: monospace;
+  font-size: 12px;
+  margin-top: 8px;
+  color: #d93025;
+  font-weight: bold;
+}
+
+.public-text {
+  font-family: monospace;
+  font-size: 12px;
+  margin-top: 8px;
+  color: #28a745;
+  font-weight: bold;
+}
+
+.status-text {
+  font-family: monospace;
+  font-size: 12px;
+  margin-top: 8px;
+  color: #555;
+}
+
+.status-text.active {
+  color: #ccc;
+}
+
+.empty-state {
+  font-family: monospace;
+  color: #666;
+  margin-top: 15px;
+}
+
+/* --- DECRYPTION & CONNECTION UI --- */
+.decryption-box {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px dashed #000;
+}
+
+.decryption-box.active {
+  border-top-color: #555;
+}
+
+.decryption-header {
+  font-family: monospace;
+  font-size: 11px;
+  color: #d93025;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.decryption-form {
+  display: flex;
+  gap: 5px;
+}
+
+.decryption-input {
+  width: 90px;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 4px;
+  border: 2px solid #000;
+  outline: none;
+  text-transform: uppercase;
+  background: #fff;
+  color: #000;
+}
+
+.decryption-btn {
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.connect-terminal-wrapper {
+  text-decoration: none;
+  display: block;
+  margin-top: 10px;
+}
+
+.connect-terminal-btn {
+  font-family: monospace;
+  font-size: 11px;
+  color: #28a745;
+  font-weight: bold;
+  padding-top: 10px;
+  border-top: 2px dashed #000;
+  text-align: center;
+  background: #28a74522;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #28a745;
+}
+
+.connect-terminal-btn.active {
+  border-top-color: #555;
+}

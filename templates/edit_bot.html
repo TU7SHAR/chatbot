@@ -1,0 +1,385 @@
+{% extends 'base.html' %} 
+
+{% block title %}Edit Chatbot | {{ bot.bot_name }}{% endblock %} 
+
+{% block content %}
+<style>
+  .cb-container { max-width: 1200px; margin: 0 auto; padding-top: 20px; }
+  .cb-header { font-size: 32px; color: var(--text-primary); margin-bottom: 8px; }
+  .cb-layout { display: flex; gap: 40px; align-items: flex-start; }
+
+  .cb-sidebar { width: 220px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 100px; }
+  .cb-tab {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; color: var(--text-secondary); background: transparent;
+    border: 1px solid transparent; cursor: pointer; text-align: left; font-family: 'Outfit', sans-serif; transition: 0.2s;
+  }
+  .cb-tab:hover { background: rgba(232, 114, 42, 0.05); color: var(--text-primary); }
+  .cb-tab.active { background: rgba(232, 114, 42, 0.1); color: var(--orange); border: 1px solid rgba(232, 114, 42, 0.2); font-weight: 700; }
+
+  .cb-content { flex: 1; min-height: 600px; }
+  .cb-content-title { font-size: 24px; color: var(--text-primary); margin-top: 0; margin-bottom: 8px; }
+  .cb-content-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; border-bottom: 2px solid rgba(232, 114, 42, 0.15); padding-bottom: 12px; }
+  .cb-pane { display: none; animation: fadeIn 0.3s ease; }
+  .cb-pane.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .cb-label { display: block; font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+
+  /* --- KNOWLEDGE BASE FIX --- */
+  .doc-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; }
+  .doc-item {
+    background: white; border: 1px solid rgba(0,0,0,0.05); padding: 12px 18px; border-radius: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .custom-file-upload {
+    border: 2px dashed rgba(232, 114, 42, 0.2); border-radius: 16px; padding: 30px;
+    text-align: center; background: rgba(255,255,255,0.3); cursor: pointer; display: block;
+  }
+
+  /* --- MOCK PREVIEW FIX --- */
+  .ui-layout-split { display: flex; gap: 40px; }
+  .ui-settings-col { flex: 1; }
+  .ui-preview-col {
+    flex: 1; display: flex; justify-content: center; align-items: center;
+    background: rgba(255, 255, 255, 0.2); border: 1px dashed rgba(232, 114, 42, 0.2); border-radius: 24px; padding: 30px;
+  }
+  .mock-chat-widget {
+    width: 100%; max-width: 320px; height: 400px; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.4); display: flex; flex-direction: column;
+  }
+  .mock-chat-header { padding: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+  .mock-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; }
+  .mock-chat-body { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+  .mock-bubble-in { background: rgba(0,0,0,0.05); padding: 10px 14px; border-radius: 12px 12px 12px 4px; font-size: 12px; align-self: flex-start; max-width: 80%; }
+  .mock-bubble-out { color: white; padding: 10px 14px; border-radius: 12px 12px 4px 12px; font-size: 12px; align-self: flex-end; max-width: 80%; }
+
+  .cb-bottom-bar { margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: flex-end; }
+
+  /* --- SCRAPER SETTINGS UI --- */
+  .scrape-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .scrape-setting-card {
+    background: white;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+  }
+
+  .scrape-setting-card:hover {
+    border-color: rgba(232, 114, 42, 0.3);
+  }
+
+  .setting-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .setting-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .setting-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Custom iOS-style Toggle Switch */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    margin: 0;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #e4e4e7;
+    transition: .3s ease;
+    border-radius: 24px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s ease;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: var(--orange, #E8722A);
+  }
+
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+  }
+
+  /* Compact Input Override */
+  .limit-input {
+    width: 65px !important;
+    text-align: center;
+    padding: 8px !important;
+    margin: 0 !important;
+    font-weight: 700;
+  }
+</style>
+
+<div class="cb-container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+      <div>
+          <h1 class="cb-header bricolage">{{ bot.bot_name }}</h1>
+          <span style="font-size: 11px; font-weight: 800; color: var(--orange); background: rgba(232,114,42,0.1); padding: 5px 12px; border-radius: 50px;">STORE: {{ bot.store_id[:18] }}...</span>
+      </div>
+      <a href="{{ url_for('views_bp.dashboard') }}" class="btn btn-outline btn-sm">← Back to Terminal</a>
+  </div>
+
+  <form action="/admin/update_bot/{{ bot.id }}" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="theme_mode" id="theme_mode" value="{% if bot.ui_settings %}{{ bot.ui_settings.theme_mode }}{% else %}light{% endif %}">
+
+    <div class="cb-layout">
+      <div class="cb-sidebar">
+        <button type="button" class="cb-tab active" onclick="switchCbTab('tab-files')"> Knowledge Base</button>
+        <button type="button" class="cb-tab" onclick="switchCbTab('tab-website')"> Website Scraper</button>
+        <button type="button" class="cb-tab" onclick="switchCbTab('tab-ui')"> User Interface</button>
+        <button type="button" class="cb-tab" onclick="switchCbTab('tab-settings')"> Personality</button>
+      </div>
+
+      <div class="cb-content">
+        <div class="lg">
+          <div class="lg-fx"></div>
+          <div class="lg-tint" style="background: rgba(255,255,255,0.7);"></div>
+          <div class="lg-shine"></div>
+          <div class="lg-c" style="padding: 40px;">
+            
+            <div id="tab-files" class="cb-pane active">
+              <h2 class="cb-content-title bricolage">Knowledge Base</h2>
+              <p class="cb-content-subtitle">Files used to train your agent.</p>
+              
+              <div class="doc-list">
+                {% if docs %}
+                    {% for doc in docs %}
+                    <div class="doc-item">
+                        <span style="font-size: 13px; font-weight: 700;">📄 {{ doc.filename[:50] }}</span>
+                        <a href="{{ url_for('admin_bp.delete_doc', doc_id=doc.id) }}" class="btn btn-ghost btn-sm text-danger">Delete</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state" style="text-align: center; padding: 30px; background: rgba(0,0,0,0.02); border-radius: 12px;">No documents yet.</p>
+                {% endif %}
+              </div>
+
+              <label class="cb-label">Add Documents</label>
+              <label class="custom-file-upload">
+                  <span style="font-size: 14px; font-weight: 700; color: var(--text-primary);">Click to upload files</span>
+                  <input type="file" name="file" multiple style="display: none;">
+              </label>
+
+              <div class="cb-bottom-bar">
+                <button type="submit" class="btn btn-solid">Save Knowledge</button>
+              </div>
+            </div>
+
+            <div id="tab-website" class="cb-pane">
+              <h2 class="cb-content-title bricolage">Website Scraper</h2>
+              <p class="cb-content-subtitle">Train from live URLs.</p>
+              
+              <label class="cb-label">Target URL</label>
+              <input type="url" id="scrape_url" placeholder="https://example.com" class="dash-input" style="width: 100%; margin-bottom: 15px;" />
+              
+              <div class="scrape-settings-grid">
+                
+                <div class="scrape-setting-card">
+                  <div class="setting-info">
+                    <span class="setting-title">Deep Crawl</span>
+                    <span class="setting-desc">Follow sub-links automatically</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="use_deep_crawl">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+
+                <div class="scrape-setting-card">
+                  <div class="setting-info">
+                    <span class="setting-title">Page Limit</span>
+                    <span class="setting-desc">Max URLs to process</span>
+                  </div>
+                  <input type="number" id="max_urls" value="20" class="dash-input limit-input" min="1" max="500">
+                </div>
+
+              </div>
+
+              <button type="button" class="btn btn-outline" style="margin-top: 20px; width: 100%;" id="scrape-btn">🚀 Start Scraping</button>
+              
+              <div id="scrape-log-container" style="display: none; margin-top: 20px;">
+                  <pre id="scrape-terminal-text" style="background: #000; color: #0f0; padding: 15px; border-radius: 12px; font-size: 10px; height: 150px; overflow-y: auto; font-family: monospace;"></pre>
+              </div>
+            </div>
+
+            <div id="tab-ui" class="cb-pane">
+              <h2 class="cb-content-title bricolage">Agent's UI</h2>
+              <p class="cb-content-subtitle">Custom appearance settings.</p>
+              
+              <div class="ui-layout-split">
+                <div class="ui-settings-col">
+                  <label class="cb-label">Agent Name</label>
+                  <input type="text" name="bot_name" id="bot_name" class="dash-input" value="{{ bot.bot_name }}" oninput="updateLivePreview()" style="width: 100%;" />
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                    <div><label class="cb-label">Appearance</label><button type="button" id="btn-theme-light" class="btn btn-outline btn-sm" onclick="setPreviewTheme('light')">☀️</button> <button type="button" id="btn-theme-dark" class="btn btn-ghost btn-sm" onclick="setPreviewTheme('dark')">🌙</button></div>
+                    <div><label class="cb-label">Accent</label><input type="color" name="theme_color" id="theme_color" value="{% if bot.ui_settings %}{{ bot.ui_settings.theme_color }}{% else %}#E8722A{% endif %}" oninput="updateLivePreview()" style="width:100%; height:34px; border:none; border-radius:8px;"></div>
+                  </div>
+
+                  <div style="background: rgba(232, 114, 42, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(232, 114, 42, 0.1);">
+                    <label class="cb-label" style="color: var(--orange);">Glass</label>
+                    <input type="range" name="glass_opacity" id="glass_opacity" min="5" max="95" value="{% if bot.ui_settings %}{{ bot.ui_settings.glass_opacity }}{% else %}35{% endif %}" style="width:100%;" oninput="updateLivePreview()">
+                    <input type="range" name="glass_blur" id="glass_blur" min="0" max="50" value="{% if bot.ui_settings %}{{ bot.ui_settings.glass_blur }}{% else %}25{% endif %}" style="width:100%;" oninput="updateLivePreview()">
+                  </div>
+                </div>
+
+                <div class="ui-preview-col">
+                  <div class="mock-chat-widget" id="mock-widget">
+                    <div class="mock-chat-header"><div id="preview-avatar" class="mock-avatar">T</div><strong id="preview-name" style="font-size: 13px;">{{ bot.bot_name }}</strong></div>
+                    <div class="mock-chat-body"><div class="mock-bubble-in">System ready.</div><div class="mock-bubble-out" id="preview-bubble">Preview mode.</div></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="cb-bottom-bar"><button type="submit" class="btn btn-solid">Save UI Changes</button></div>
+            </div>
+
+            <div id="tab-settings" class="cb-pane">
+              <h2 class="cb-content-title bricolage">Personality</h2>
+              <p class="cb-content-subtitle">Define instructions and model behavior.</p>
+
+              <div style="display: flex; flex-direction: column; gap: 25px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="width: 100%;">
+                        <label class="cb-label">Model Engine</label>
+                        <select name="bot_type" class="dash-input" style="width: 100%; height: 45px;">
+                            <option value="general" {% if bot.bot_type == 'general' %}selected{% endif %}>GPT-4.5 Mini (Default)</option>
+                            <option value="sales" {% if bot.bot_type == 'sales' %}selected{% endif %}>Sales Agent</option>
+                        </select>
+                    </div>
+                    <div style="width: 100%;">
+                        <label class="cb-label">Visibility</label>
+                        <select name="visibility" class="dash-input" style="width: 100%; height: 45px;">
+                            <option value="private" {% if bot.visibility == 'private' %}selected{% endif %}>Private (Restricted)</option>
+                            <option value="public" {% if bot.visibility == 'public' %}selected{% endif %}>Public (Shared)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="width: 100%;">
+                    <label class="cb-label">Base Prompt (System Instructions)</label>
+                    <p style="font-size: 11px; color: #888; margin-bottom: 10px;">This defines how your agent responds to users. Be specific about its role and knowledge.</p>
+                    <textarea name="system_prompt" class="dash-input" rows="12" style="width: 100%; resize: vertical; padding: 20px; line-height: 1.6; font-family: 'Inter', sans-serif;">{{ bot.system_prompt }}</textarea>
+                </div>
+              </div>
+
+              <div class="cb-bottom-bar">
+                <button type="submit" class="btn btn-solid" style="padding: 14px 40px;">Update Agent Personality</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  function switchCbTab(tabId) {
+    document.querySelectorAll('.cb-tab').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.cb-pane').forEach(pane => pane.classList.remove('active'));
+    const targetBtn = Array.from(document.querySelectorAll('.cb-tab')).find(btn => btn.getAttribute('onclick').includes(tabId));
+    if(targetBtn) targetBtn.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  function updateLivePreview() {
+    const name = document.getElementById('bot_name').value || "Agent";
+    const color = document.getElementById('theme_color').value;
+    const opacity = document.getElementById('glass_opacity').value;
+    const blur = document.getElementById('glass_blur').value;
+    const theme = document.getElementById('theme_mode').value;
+
+    document.getElementById('preview-name').innerText = name;
+    document.getElementById('preview-avatar').innerText = name[0].toUpperCase();
+    document.getElementById('preview-bubble').style.backgroundColor = color;
+    document.getElementById('preview-avatar').style.backgroundColor = color;
+
+    const widget = document.getElementById('mock-widget');
+    const alpha = opacity / 100;
+    widget.style.backgroundColor = (theme === 'dark') ? `rgba(17, 24, 39, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
+    widget.style.backdropFilter = `blur(${blur}px)`;
+    widget.style.webkitBackdropFilter = `blur(${blur}px)`;
+  }
+
+  function setPreviewTheme(theme) {
+    document.getElementById('theme_mode').value = theme;
+    document.getElementById('btn-theme-light').className = (theme === 'light') ? 'btn btn-outline btn-sm active' : 'btn btn-ghost btn-sm';
+    document.getElementById('btn-theme-dark').className = (theme === 'dark') ? 'btn btn-outline btn-sm active' : 'btn btn-ghost btn-sm';
+    updateLivePreview();
+  }
+
+  // Scraper AJAX Logic
+  document.getElementById('scrape-btn').addEventListener('click', async function() {
+      const url = document.getElementById('scrape_url').value;
+      if(!url) return alert("Enter URL");
+      const logBox = document.getElementById('scrape-log-container');
+      const logText = document.getElementById('scrape-terminal-text');
+      logBox.style.display = 'block';
+      logText.innerText = "> Initializing Scraper Engine...\n> Identifying internal links...";
+      
+      const res = await fetch("{{ url_for('admin_bp.start_scrape') }}", {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+              url: url,
+              use_spider: document.getElementById('use_deep_crawl').checked,
+              max_urls: document.getElementById('max_urls').value
+          })
+      });
+      const data = await res.json();
+      if(data.job_id) {
+          const poll = setInterval(async () => {
+              const sRes = await fetch(`/admin/api/scrape/status/${data.job_id}`);
+              const sData = await sRes.json();
+              if(sData.logs) logText.innerText = sData.logs;
+              if(sData.status === 'completed') { clearInterval(poll); window.location.reload(); }
+          }, 2000);
+      }
+  });
+
+  document.addEventListener('DOMContentLoaded', updateLivePreview);
+</script>
+{% endblock %}

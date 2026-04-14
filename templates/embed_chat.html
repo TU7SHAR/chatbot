@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BotFactory Chat Widget</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+      :root {
+        --theme-color: {{ bot.ui_settings.theme_color if bot.ui_settings else '#E8722A' }};
+      }
+
+      body, html {
+        background: transparent !important;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: "Outfit", sans-serif !important; 
+      }
+
+      /* 3. Just bump the glass opacity for dark websites. No sizing hacks needed! */
+      #chat-window-popup {
+        background: rgba(255, 255, 255, 0.92) !important; 
+        backdrop-filter: blur(20px) !important;
+      }
+
+      #chat-widget-container {
+        bottom: 10px !important;
+        right: 10px !important;
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'chat.html' %}
+    <script>
+      window.EMBEDDED_BOT_ID = "{{ bot.id }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  </body>
+</html>
+
+<!-- <script 
+  src="http://127.0.0.1:5000/static/js/embed.js" 
+  data-bot-id="1" 
+  defer>
+</script> -->

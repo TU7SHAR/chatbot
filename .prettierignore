@@ -1,0 +1,3 @@
+# Ignore Flask/Jinja Templates (Prettier breaks these!)
+templates/**/*.html
+edit_bot.html

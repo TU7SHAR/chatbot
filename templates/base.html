@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Chatbot AI{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/create_pipeline.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile_chat.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="{{ url_for('static', filename='js/sprite.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  </head>
+
+  <body>
+    <svg aria-hidden="true" style="position: absolute; width: 0; height: 0">
+      <defs>
+        <filter id="glass-fx" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="2" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="20" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <filter id="glass-heavy" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="8" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+
+    <div class="bg-canvas" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <div class="content">
+      <nav class="navbar" id="nav">
+        <div class="nav-container">
+          <a href="{{ url_for('views_bp.index') }}" class="nav-logo bricolage">
+            chat.<span class="text-orange">bot</span>
+          </a>
+
+          <div class="nav-menu">
+            <div class="nav-links">
+              {# Case 1: User is logged in AND NOT on the marketing pages #}
+              {% if session.get('user_id') and request.path not in ['/', '/pricing', '/compare'] %}
+                <a href="{{ url_for('views_bp.dashboard') }}" class="nav-link">Dashboard</a>
+                <a href="{{ url_for('admin_bp.create_pipeline') }}" class="nav-link">Create Bot</a>
+                <a href="{{ url_for('profile_bp.profile') }}" class="nav-link">Profile</a>
+                
+                {% if request.endpoint == 'admin_bp.edit_bot' %}
+                  <span style="color: rgba(0,0,0,0.2); font-weight: 300;">/</span>
+                  <span class="nav-link" style="color: var(--orange); font-weight: 800; cursor: default; pointer-events: none;">Edit Bot</span>
+                {% endif %}
+
+              {# Case 2: User is on Marketing pages (Home, Pricing, Compare) #}
+              {% else %}
+                <a href="{{ url_for('views_bp.index') }}#features" class="nav-link">Features</a>
+                <a href="{{ url_for('views_bp.pricing') }}" class="nav-link">Pricing</a>
+                <div class="has-drop">
+                 <a href="{{ url_for('views_bp.compare') }}" class="nav-link">Compare</a>
+                 <div class="drop">
+                   <a href="/compare/chatbase.html">vs Chatbase</a>
+                   <a href="/compare/tidio.html">vs Tidio</a>
+                   <a href="/compare/intercom.html">vs Intercom</a>
+                   <a href="/compare/gupshup.html">vs Gupshup</a>
+                   <a href="/compare/">View All &rarr;</a>
+                 </div>
+               </div>
+                <a href="{{ url_for('views_bp.index') }}#how-to" class="nav-link">How It Works</a>
+                
+                {% if session.get('user_id') %}
+                  <a href="{{ url_for('views_bp.dashboard') }}" class="nav-link">Dashboard</a>
+                {% endif %}
+              {% endif %}
+            </div>
+            
+            <div class="nav-auth-group">
+              {% if session.get('user_id') %}
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-solid btn-nav" style="background: #fdf2f0; color: var(--orange); box-shadow: none;">Logout</a>
+              {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-solid btn-nav">Get Started Free</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main class="main-content">
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="footer">
+        <div class="footer-container">
+          <div class="footer-grid">
+            <div class="footer-brand">
+              <a href="{{ url_for('views_bp.index') }}" class="nav-logo bricolage">bubbl<span class="text-orange">.ooo</span></a>
+              <p class="footer-desc">AI chatbot platform for Indian SMBs. WhatsApp-native, no-code, and premium support.</p>
+            </div>
+
+            <div class="footer-col">
+              <h4 class="bricolage">Product</h4>
+              <a href="{{ url_for('views_bp.index') }}#features">Features</a>
+              <a href="{{ url_for('views_bp.pricing') }}">Pricing</a>
+              <a href="#">Roadmap</a>
+              <a href="{{ url_for('views_bp.index') }}#how-to">How-To Guides</a>
+            </div>
+
+            <div class="footer-col">
+              <h4 class="bricolage">Compare</h4>
+              <a href="{{ url_for('views_bp.compare') }}">vs Chatbase</a>
+              <a href="{{ url_for('views_bp.compare') }}">vs Tidio</a>
+              <a href="{{ url_for('views_bp.compare') }}">vs Intercom</a>
+              <a href="{{ url_for('views_bp.compare') }}" style="color: var(--orange);">View All →</a>
+            </div>
+
+            <div class="footer-col">
+              <h4 class="bricolage">Legal</h4>
+              <a href="#">Privacy Policy</a>
+              <a href="#">Terms of Service</a>
+            </div>
+          </div>
+
+          <div class="footer-bottom">
+            <p>© 2026 Bubbl.ooo · Built by <strong>ESS ENN Associates</strong> & <strong>172 Tech</strong></p>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    {% include 'chat.html' %}
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+   <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // --- 1. GSAP Navbar Animations (Bulletproof approach) ---
+        const navTimeline = gsap.timeline();
+        
+        navTimeline
+          // Force start at 0 opacity/-30y, force end at 1 opacity/0y
+          .fromTo(".nav-logo", 
+            { y: -30, opacity: 0 }, 
+            { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
+          )
+          .fromTo("a.nav-link", 
+            { y: -20, opacity: 0 }, 
+            { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: "power2.out", clearProps: "transform" }, 
+            "-=0.4"
+          )
+          .fromTo(".btn-nav", 
+            { y: -20, opacity: 0 }, 
+            { y: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: "power2.out", clearProps: "transform" }, 
+            "-=0.3"
+          );
+
+
+        // --- 2. Active Link Highlighting ---
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll("a.nav-link");
+
+        navLinks.forEach((link) => {
+          const linkPath = link.getAttribute("href");
+          if (linkPath === currentPath && currentPath !== "/") {
+            link.style.color = "var(--orange)"; 
+            link.style.fontWeight = "700";
+            link.style.pointerEvents = "none";
+          }
+        });
+
+        // --- 3. Navbar Background Scroll Effect ---
+        const nav = document.getElementById('nav');
+        if (nav) {
+          window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 50);
+          });
+        }
+      });
+      document.addEventListener("DOMContentLoaded", function () {
+    // Find all flash messages on the page
+    const flashMessages = document.querySelectorAll('.flash-msg');
+    
+    flashMessages.forEach(msg => {
+      // Wait exactly 3 seconds (3000 milliseconds)
+      setTimeout(() => {
+        // Trigger the CSS transition to fade out and float up
+        msg.style.opacity = '0';
+        msg.style.transform = 'translateY(-10px)';
+        
+        // Wait 400ms for the fade animation to finish, then delete the HTML element
+        setTimeout(() => {
+          msg.remove();
+        }, 400); 
+        
+      }, 3000); 
+    });
+  });
+    </script>
+  </body>
+</html>

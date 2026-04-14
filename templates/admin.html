@@ -1,0 +1,161 @@
+{% extends 'base.html' %} 
+{% block title %}Control Panel | Knowledge Base{% endblock %} 
+
+{% block content %}
+<div class="admin-wrapper">
+  
+  <div class="admin-header">
+    <h1>Control Panel</h1>
+    <p>Create and train your AI bots.</p>
+  </div>
+
+  {% with messages = get_flashed_messages() %} 
+    {% if messages %} 
+      {% for message in messages %}
+        <div class="glass-alert" style="background: var(--text-dark); color: white; padding: 16px; border-radius: var(--radius-sm); margin-bottom: 24px; text-align: center; font-weight: 600;">
+          {{ message }}
+        </div>
+      {% endfor %} 
+    {% endif %} 
+  {% endwith %}
+
+  <div class="admin-split-layout">
+    
+    <div class="admin-left-panel">
+      
+      <div class="glass-card">
+        <h3 class="admin-section-title">Bot Creation</h3>
+
+        <form action="/admin/create_bot" method="POST" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+          <input type="text" name="bot_name" placeholder="Bot Name (e.g. Sales Assistant)" required class="glass-input" />
+          
+          <div style="display: flex; gap: 10px;">
+            <select name="visibility" class="glass-input" style="flex: 1;">
+              <option value="public">Public (Org Wide)</option>
+              <option value="private">Private (Password)</option>
+            </select>
+            <button type="submit" class="glass-btn-primary">Create Bot</button>
+          </div>
+        </form>
+
+        <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 20px;">
+          <label style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: block;">
+            Select Bot to Manage:
+          </label>
+          <select onchange="window.location.href = '/admin/select_bot/' + this.value" class="glass-input">
+            <option value="" disabled {% if not active_bot %}selected{% endif %}>Choose a bot...</option>
+            {% for bot in bots %}
+            <option value="{{ bot.id }}" {{ 'selected' if active_bot and bot.id == active_bot.id else '' }}>
+              {{ bot.bot_name }} {{ '(Private)' if bot.visibility == 'private' else '' }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if active_bot %}
+        <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+          <form action="/admin/rename_bot/{{ active_bot.id }}" method="POST" style="display: flex; gap: 8px;">
+            <input type="text" name="new_bot_name" value="{{ active_bot.bot_name }}" class="glass-input" required />
+            <button type="submit" class="glass-btn-secondary">Rename</button>
+          </form>
+
+          {% if active_bot.visibility == 'private' %}
+          <div style="background: rgba(220,38,38,0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(220,38,38,0.2); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; color: #dc2626; font-size: 13px;">KEY: {{ active_bot.access_key }}</span>
+            <button class="glass-btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="navigator.clipboard.writeText('{{ active_bot.access_key }}'); alert('Key Copied!')">Copy</button>
+          </div>
+          {% endif %}
+
+          <form action="/admin/delete_bot/{{ active_bot.id }}" method="POST" onsubmit="return confirm('Permanently delete this bot?');">
+            <button type="submit" class="glass-btn-danger">Delete Bot</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if active_bot %}
+      <div class="glass-card" style="margin-top: 32px;">
+        <h3 class="admin-section-title">Bot Training</h3>
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="openTab(event, 'files-tab')">Files</button>
+          <button class="tab-btn" onclick="openTab(event, 'scrape-tab')">Scraper</button>
+          <button class="tab-btn" onclick="openTab(event, 'text-tab')">Text</button>
+        </div>
+
+        <div id="files-tab" class="tab-content active">
+          <form action="/admin/upload" method="POST" enctype="multipart/form-data" class="upload-box">
+            <input type="file" name="file" id="file" required class="hidden-input" onchange="document.getElementById('file-chosen').innerText = this.files[0].name" style="display:none" />
+            <label for="file" class="glass-btn-secondary" style="display: block; margin-bottom: 10px; cursor: pointer;">Browse Documents</label>
+            <div id="file-chosen" style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">No file chosen</div>
+            <button type="submit" class="glass-btn-primary" style="width: 100%">Upload & Train</button>
+          </form>
+        </div>
+
+       <div id="scrape-tab" class="tab-content" style="display: none">
+    <form onsubmit="startScraping(event)" style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <div>
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: block;">TARGET URL</label>
+            <input type="url" id="scrape_url" placeholder="https://example.com/docs" class="glass-input" required />
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.4); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
+            <input type="checkbox" id="use_deep_crawl" style="width: 18px; height: 18px; cursor: pointer;">
+            <label for="use_deep_crawl" style="font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer;">
+                Enable Deep Crawl (Spider)
+            </label>
+        </div>
+        
+        <button type="submit" id="btn-scrape" class="glass-btn-primary" style="width: 100%">
+            Launch Scraper
+        </button>
+    </form>
+
+    <div id="scrape-progress" class="status-box" style="display: none; margin-top: 16px; border-left: 4px solid var(--text-dark);">
+        <strong id="scrape-status-text" style="font-family: 'Sora', sans-serif; font-size: 13px;">INITIALIZING CRAWLER...</strong>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">This may take a few minutes depending on site size.</p>
+    </div>
+</div>
+
+        <div id="text-tab" class="tab-content" style="display: none">
+          <form action="/admin/upload_text" method="POST">
+            <input type="text" name="title" placeholder="Document Title" class="glass-input" style="margin-bottom: 12px;" />
+            <textarea name="content" placeholder="Paste knowledge here..." class="glass-textarea" style="margin-bottom: 15px;"></textarea>
+            <button type="submit" class="glass-btn-primary" style="width: 100%">Save Knowledge</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="admin-right-panel">
+      <div class="glass-card" style="position: sticky; top: 100px;">
+        <h3 class="admin-section-title">Ingested Sources ({{ files|length }})</h3>
+        <div class="source-list">
+          {% for file in files %}
+          <div class="source-item">
+            <a href="/admin/delete/{{ file|urlencode }}" style="color: #dc2626; text-decoration: none; font-weight: bold; margin-right: 10px;" onclick="return confirm('Delete source?');">×</a>
+            <span style="font-size: 13px; font-weight: 600;">{{ file }}</span>
+          </div>
+          {% else %}
+          <p style="color: var(--text-muted); font-style: italic;">No training data yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function openTab(evt, tabName) {
+    var i, tabcontent, tabbtns;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+    tabbtns = document.getElementsByClassName("tab-btn");
+    for (i = 0; i < tabbtns.length; i++) { tabbtns[i].classList.remove("active"); }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.classList.add("active");
+  }
+</script>
+{% endblock %}

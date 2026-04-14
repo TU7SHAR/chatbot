@@ -1,0 +1,130 @@
+{% extends 'base.html' %} 
+
+{% block title %}Dashboard | Terminals{% endblock %} 
+
+{% block content %}
+<div class="dash-container">
+    {% with messages = get_flashed_messages(with_categories=true) %} 
+      {% if messages %} 
+        <div style="margin-bottom: 20px;">
+        {% for category, message in messages %}
+          <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+        {% endfor %} 
+        </div>
+      {% endif %} 
+    {% endwith %}
+    <div class="dash-column-header">
+        <h2 class="bricolage">My <span class="text-orange">Chatbots</span></h2>
+        <!-- <div class="header-actions">
+            {% if session.get('role') == 'admin' %}
+            <button onclick="document.getElementById('inviteModal').style.display='flex'" class="btn btn-outline btn-sm">
+                + Invite Member
+            </button>
+            {% endif %}
+        </div> -->
+    </div>
+
+    <div class="bot-grid">
+        
+        <a href="{{ url_for('admin_bp.create_pipeline') }}" class="add-bot-card">
+            <div class="add-icon">+</div>
+            <span class="bricolage">New Chatbot</span>
+        </a>
+
+        {% for bot in my_bots %}
+        <div class="bot-card {% if bot.id == session.get('active_bot_id') %}active{% endif %}" onclick="window.location.href='/set_active_bot/{{ bot.id }}'">
+            
+            {% set b_color = bot.ui_settings.theme_color if bot.ui_settings else '#E8722A' %}
+            
+            <div class="card-banner" style="background: linear-gradient(135deg, {{ b_color }} 0%, #1a1008 160%);">
+                <div class="card-avatar">{{ bot.bot_name[0] | upper if bot.bot_name else 'B' }}</div>
+                
+                <div class="card-menu-wrapper" onclick="event.stopPropagation();">
+                    <button class="dots-btn" onclick="toggleBotMenu(event, 'menu-{{bot.id}}')">⋮</button>
+                    <div id="menu-{{bot.id}}" class="dropdown-window">
+                        <a href="/admin/edit_bot/{{bot.id}}">Edit Bot</a>
+                        <form action="{{ url_for('admin_bp.delete_bot', bot_id=bot.id) }}" method="POST" onsubmit="return confirm('Delete {{ bot.bot_name }}?');">
+                            <button type="submit" class="text-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <h3 class="bricolage">{{ bot.bot_name }}</h3>
+                
+                <div class="card-middle-row">
+                    {% if bot.visibility == 'private' %}
+                    <div class="card-key-row" onclick="event.stopPropagation();">
+                        <span class="key-val">{{ bot.access_key if bot.access_key else 'UNSET' }}</span>
+                        <button class="copy-link" onclick="copyDecryptionKey('{{ bot.access_key }}', event)">Copy Key</button>
+                    </div>
+                    {% else %}
+                    <div class="public-badge-container">
+                        <span class="tag-success">Public Agent</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-actions">
+                    <a href="{{ url_for('views_bp.integrate_bot', bot_id=bot.id) }}" class="btn-setup" onclick="event.stopPropagation();">Setup & Embed</a>
+                    <span class="pill-status {% if bot.id == session.get('active_bot_id') %}active{% endif %}">
+                        {% if bot.id == session.get('active_bot_id') %}ACTIVE{% else %}READY{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="inviteModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+        <h3 class="bricolage">Add Team Member</h3>
+        <form action="{{ url_for('admin_bp.invite_member') }}" method="POST">
+            <label class="modal-label">Full Name</label>
+            <input type="text" name="name" required class="dash-input w-full">
+            <label class="modal-label">Email Address</label>
+            <input type="email" name="email" required class="dash-input w-full">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div><label class="modal-label">Password</label><input type="password" name="password" required class="dash-input w-full"></div>
+                <div><label class="modal-label">Role</label><select name="role" class="dash-input w-full"><option value="member">Member</option><option value="admin">Admin</option></select></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-solid flex-1">Create User</button>
+                <button type="button" onclick="document.getElementById('inviteModal').style.display='none'" class="btn btn-outline flex-1">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleBotMenu(event, menuId) {
+    event.stopPropagation();
+    document.querySelectorAll('.dropdown-window').forEach(m => {
+        if(m.id !== menuId) m.classList.remove('show');
+    });
+    document.getElementById(menuId).classList.toggle('show');
+}
+
+window.onclick = function(event) {
+    if (!event.target.matches('.dots-btn')) {
+        document.querySelectorAll('.dropdown-window').forEach(m => m.classList.remove('show'));
+    }
+}
+
+function copyDecryptionKey(key, event) {
+    event.stopPropagation();
+    if (!key || key === 'None') return;
+    navigator.clipboard.writeText(key);
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
+    btn.innerText = "COPIED";
+    btn.classList.add('is-copied');
+    setTimeout(() => {
+        btn.innerText = originalText;
+        btn.classList.remove('is-copied');
+    }, 2000);
+}
+</script>
+{% endblock %}

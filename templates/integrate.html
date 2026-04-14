@@ -1,0 +1,273 @@
+{% extends 'base.html' %} {% block content %}
+<style>
+  #sprite-ask-container,
+  #chat-window-popup {
+    display: none !important;
+  }
+</style>
+<div
+  class="integration-container"
+  style="max-width: 1200px; margin: 40px auto; padding: 0 20px"
+>
+  <div class="header-section" style="margin-bottom: 40px">
+    <a
+      href="{{ url_for('views_bp.dashboard') }}"
+      style="color: #8a6535; text-decoration: none; font-size: 14px"
+      >← Back to Dashboard</a
+    >
+    <h1
+      style="
+        color: #1c1004;
+        font-family: &quot;Sora&quot;, sans-serif;
+        margin-top: 10px;
+      "
+    >
+      Integrate <span style="color: #8a6535">{{ bot.bot_name }}</span>
+    </h1>
+    <p style="color: #5a3d18">
+      Deploy your AI agent to your website in seconds.
+    </p>
+  </div>
+
+  <div
+    class="split-layout"
+    style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px"
+  >
+    <div class="settings-panel">
+      <div
+        class="glass-card"
+        style="
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(16px);
+          padding: 30px;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.8);
+        "
+      >
+        <h3 style="margin-top: 0">1. Copy your Embed Code</h3>
+        <p style="font-size: 14px; color: #666; margin-bottom: 20px">
+          Paste the snippet that matches your website's framework.
+        </p>
+
+        <h4
+          style="
+            font-size: 13px;
+            color: #8a6535;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+          "
+        >
+          Standard HTML / WordPress
+        </h4>
+        <div
+          class="code-box"
+          style="
+            background: #0c0804;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            margin-bottom: 20px;
+          "
+        >
+          <button
+            class="copy-btn"
+            onclick="copySnippet('embed-code-html', this)"
+            style="
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              background: rgba(255, 255, 255, 0.1);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              color: white;
+              padding: 6px 12px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 12px;
+              transition: 0.2s;
+            "
+          >
+            Copy Code
+          </button>
+          <pre
+            style="
+              margin: 0;
+              color: #a3b8cc;
+              font-family: monospace;
+              font-size: 13px;
+              overflow-x: auto;
+              padding-top: 15px;
+            "
+            id="embed-code-html"
+          >
+&lt;!-- BotFactory Widget --&gt;
+&lt;script src="{{ request.host_url }}static/js/embed.js" data-bot-id="{{ bot.id }}"&gt;&lt;/script&gt;</pre
+          >
+        </div>
+
+        <h4
+          style="
+            font-size: 13px;
+            color: #8a6535;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+          "
+        >
+          React / Next.js
+        </h4>
+        <div
+          class="code-box"
+          style="
+            background: #0c0804;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+          "
+        >
+          <button
+            class="copy-btn"
+            onclick="copySnippet('embed-code-react', this)"
+            style="
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              background: rgba(255, 255, 255, 0.1);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              color: white;
+              padding: 6px 12px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 12px;
+              transition: 0.2s;
+            "
+          >
+            Copy Code
+          </button>
+          <pre
+            style="
+              margin: 0;
+              color: #a3b8cc;
+              font-family: monospace;
+              font-size: 13px;
+              overflow-x: auto;
+              padding-top: 15px;
+            "
+            id="embed-code-react"
+          >
+{/* BotFactory Widget */}
+&lt;Script id="botfactory-init" strategy="beforeInteractive"&gt;
+  {`window.BOTFACTORY_ID = "{{ bot.id }}";`}
+&lt;/Script&gt;
+&lt;Script src="{{ request.host_url }}static/js/embed.js" strategy="afterInteractive" /&gt;</pre
+          >
+        </div>
+
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            margin: 30px 0;
+          "
+        />
+
+        <h3 style="margin-top: 0">2. Security (Domain Lock)</h3>
+        <p style="font-size: 14px; color: #666; margin-bottom: 5px">
+          Lock this widget to prevent API theft. Enter the URL where this widget
+          will be hosted.
+        </p>
+        <p style="font-size: 12px; color: #999; margin-bottom: 15px">
+          <em
+            >Pro-Tip: To add multiple domains (like your dashboard preview),
+            separate them with a space: <br /><code
+              >https://www.nestimage.tech {{ request.host_url.rstrip('/')
+              }}</code
+            ></em
+          >
+        </p>
+        <form
+          action="{{ url_for('views_bp.update_bot_security', bot_id=bot.id) }}"
+          method="POST"
+          style="display: flex; gap: 10px; align-items: center"
+        >
+          <input
+            type="text"
+            name="allowed_domains"
+            value="{{ bot.allowed_domains or '' }}"
+            placeholder="e.g. https://mywebsite.com"
+            style="
+              flex: 1;
+              padding: 12px;
+              border-radius: 8px;
+              border: 1px solid #ccc;
+              background: #fff;
+            "
+          />
+          <button
+            type="submit"
+            style="
+              padding: 12px 20px;
+              background: #8a6535;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: 500;
+              white-space: nowrap;
+            "
+          >
+            Save Lock
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div
+        class="glass-card"
+        style="
+          background: rgba(255, 255, 255, 0.4);
+          backdrop-filter: blur(16px);
+          padding: 30px;
+          border-radius: 16px;
+          border: 1px dashed rgba(138, 101, 53, 0.5);
+          height: 500px;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        "
+      >
+        <h3 style="color: #1c1004; opacity: 0.5">Live Website Preview</h3>
+        <p style="color: #5a3d18; opacity: 0.5; font-size: 14px">
+          Your widget will appear in the bottom right corner of your screen.
+        </p>
+
+        <script
+          src="{{ request.host_url }}static/js/embed.js"
+          data-bot-id="{{ bot.id }}"
+        ></script>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function copySnippet(elementId, btnElement) {
+    const codeText = document.getElementById(elementId).innerText;
+
+    navigator.clipboard.writeText(codeText).then(() => {
+      btnElement.innerText = "Copied!";
+      btnElement.style.background = "#28a745"; // Success green
+      btnElement.style.borderColor = "#28a745";
+
+      setTimeout(() => {
+        btnElement.innerText = "Copy Code";
+        btnElement.style.background = "rgba(255,255,255,0.1)";
+        btnElement.style.borderColor = "rgba(255,255,255,0.2)";
+      }, 2000);
+    });
+  }
+</script>
+
+{% endblock %}

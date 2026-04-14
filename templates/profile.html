@@ -1,0 +1,100 @@
+{% extends 'base.html' %} {% block title %}Account Settings | Admin{% endblock
+%} {% block content %}
+<div class="saas-profile-wrapper">
+  <div class="saas-profile-container">
+    <div class="saas-profile-header">
+      <h1>Account Settings</h1>
+      <p>Manage your profile details and subscription.</p>
+    </div>
+
+    <div class="saas-profile-card">
+      <div class="saas-card-section">
+        <h3 class="saas-section-title">Profile</h3>
+        <div class="saas-data-row">
+          <span class="saas-data-label">Email Address</span>
+          <span class="saas-data-value"
+            >{{ user.email if user else 'admin@example.com' }}</span
+          >
+        </div>
+        <div class="saas-data-row">
+          <span class="saas-data-label">Account ID</span>
+          <span class="saas-data-value saas-monospace"
+            >usr_{{ user.id if user else '123456' }}</span
+          >
+        </div>
+      </div>
+
+      <div class="saas-card-section">
+        <h3 class="saas-section-title">Subscription</h3>
+        <div class="saas-data-row">
+          <span class="saas-data-label">Current Plan</span>
+          <span class="saas-badge-free">Hobby / Alpha</span>
+        </div>
+        <div class="saas-data-row">
+          <span class="saas-data-label">Active Bots</span>
+          <span class="saas-data-value"
+            >{{ bot_count|default(0) }} / No Limit Accounts</span
+          >
+        </div>
+      </div>
+
+      {% if session.get('role') == 'admin' and org_members %}
+      <div class="saas-card-section">
+        <h3 class="saas-section-title">Organization Members</h3>
+
+        {% for member in org_members %}
+        <div
+          class="saas-data-row"
+          style="
+            background: rgba(0, 0, 0, 0.02);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            align-items: center;
+          "
+        >
+          <div style="display: flex; flex-direction: column">
+            <span class="saas-data-value">{{ member.name }}</span>
+            <span
+              class="saas-data-label"
+              style="font-size: 12px; margin-top: 4px"
+            >
+              {{ member.email }} •
+              <strong style="color: #8a6535">{{ member.role|upper }}</strong>
+            </span>
+          </div>
+
+          <form
+            action="{{ url_for('profile_bp.remove_member', member_id=member.id) }}"
+            method="POST"
+            onsubmit="return confirm('Are you sure you want to permanently remove {{ member.name }}?');"
+            style="margin: 0"
+          >
+            <button
+              type="submit"
+              class="saas-btn saas-btn-danger"
+              style="padding: 6px 12px; font-size: 12px"
+            >
+              Remove
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="saas-card-section saas-action-area">
+        <a href="{{ url_for('auth.logout') }}" class="saas-btn saas-btn-outline"
+          >Sign Out</a
+        >
+        <button
+          class="saas-btn saas-btn-danger"
+          onclick="alert('Contact support to delete your account.')"
+        >
+          Delete Account
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

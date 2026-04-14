@@ -1,0 +1,111 @@
+{% set theme_color = session.get('theme_color', '#E8722A') %}
+{% set theme_mode = session.get('theme_mode', 'light') %}
+{% set glass_opacity = session.get('glass_opacity', 35) %}
+{% set glass_blur = session.get('glass_blur', 25) %}
+
+<style>
+  /* 1. PILL BUTTON SYNC */
+  #chat-open-btn { 
+    border: 2px solid {{ theme_color }} !important; 
+  }
+
+  /* 2. THE GLASS WINDOW BASE */
+  #chat-window-popup {
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur({{ glass_blur }}px) !important;
+    -webkit-backdrop-filter: blur({{ glass_blur }}px) !important;
+    transition: all 0.3s ease;
+  }
+
+  .chat-header { background: transparent !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
+  .chat-input-area { background: transparent !important; }
+
+  /* 3. DYNAMIC BUBBLE & SEND BUTTON */
+  .msg.user, #send-btn-icon {
+    background: {{ theme_color }} !important;
+    color: #ffffff !important;
+  }
+
+  /* 4. AVATAR INITIAL STYLING */
+  .chat-header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: {{ theme_color }};
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    margin-right: 10px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+  }
+
+  /* 5. LIGHT MODE GLASS */
+  {% if theme_mode == 'light' or not theme_mode %}
+  #chat-window-popup {
+    background: rgba(255, 255, 255, {{ glass_opacity | float / 100 }}) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  }
+  .msg.bot { background: rgba(0, 0, 0, 0.05) !important; color: #1a1a1a !important; }
+  .chat-header-title { color: #1a1a1a !important; }
+  {% endif %}
+
+  /* 6. DARK MODE GLASS */
+  {% if theme_mode == 'dark' %}
+  #chat-window-popup {
+    background: rgba(17, 24, 39, {{ glass_opacity | float / 100 }}) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  .msg.bot { background: rgba(255, 255, 255, 0.1) !important; color: #f9fafb !important; }
+  .chat-header-title { color: #f9fafb !important; }
+  .chat-input-wrapper { background: rgba(0,0,0,0.2) !important; border-color: rgba(255,255,255,0.1) !important; }
+  #user-input { color: #f9fafb !important; }
+  .chat-close-x { color: #fff !important; }
+  {% endif %}
+</style>
+
+<div id="chat-widget-container">
+  <div id="sprite-ask-container" onclick="toggleChat()">
+    <div id="bot-sprite"></div>
+
+    <button id="chat-open-btn">
+      Ask: {{ session.get('active_bot_name', 'Bot') }}
+    </button>
+  </div>
+
+  <div id="chat-window-popup" class="hidden">
+    <div class="chat-header">
+      <div class="chat-header-info" style="display: flex; align-items: center;">
+        <div class="chat-header-avatar">
+            {{ session.get('active_bot_name', 'B')[0] | upper }}
+        </div>
+        <div>
+            <span class="status-dot"></span>
+            <span class="chat-header-title">{{ session.get('active_bot_name', 'Global') | upper }}</span>
+        </div>
+      </div>
+      <button class="chat-close-x" onclick="toggleChat()">✕</button>
+    </div>
+
+    <div id="chat-display">
+      <div class="msg bot">
+        System ready. Querying <strong>{{ session.get('active_bot_name', 'selected bot') }}</strong>...
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <input type="text" id="user-input" placeholder="Type a message..." autocomplete="off" onkeypress="if (event.key === 'Enter') sendMessage();" />
+        <button id="send-btn-icon" onclick="sendMessage()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

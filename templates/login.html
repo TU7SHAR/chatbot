@@ -1,0 +1,179 @@
+{% extends 'base.html' %} 
+
+{% block title %}Login | chat.bot{% endblock %} 
+
+{% block content %}
+<style>
+  /* 1. Container Alignment & Spacing */
+  .auth-wrapper {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+    border-radius: 24px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    margin: 60px auto; /* Centers it perfectly */
+  }
+
+  .auth-title {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 32px;
+    color: #1a1008;
+  }
+
+  /* 2. Form Groups & Labels */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .cb-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    margin-bottom: 8px;
+  }
+
+  /* 3. Perfected Inputs */
+  .dash-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    box-sizing: border-box; /* Crucial: stops padding from breaking the width */
+  }
+  
+  .dash-input:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(232, 114, 42, 0.1);
+  }
+
+  /* 4. Password Specifics */
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 8px; 
+  }
+
+  .password-wrapper input {
+    padding-right: 60px; /* Room for the SHOW button */
+  }
+
+  .text-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: "Outfit", sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--orange);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    padding: 0;
+  }
+
+  .text-toggle:hover { color: #1a1008; }
+
+  /* 5. Links & Buttons */
+  .forgot-link {
+    display: block;
+    text-align: right;
+    font-size: 13px;
+    color: #666;
+    text-decoration: none;
+    font-weight: 600;
+    margin-bottom: 24px;
+    transition: color 0.2s;
+  }
+
+  .forgot-link:hover { color: var(--orange); }
+
+  .auth-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px;
+    font-size: 16px;
+  }
+
+  /* 6. Footer section */
+  .auth-footer {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 14px;
+  }
+
+  .auth-footer a {
+    color: #444;
+    text-decoration: none !important; /* Removes the ugly line */
+    font-weight: 500;
+  }
+
+  .auth-footer a span {
+    color: var(--orange);
+    font-weight: 700;
+  }
+</style>
+
+<div class="auth-wrapper">
+  <h2 class="bricolage auth-title">Login</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %} 
+    {% if messages %} 
+      {% for category, message in messages %}
+        <div class="flash-msg flash-{{ category }}">{{ message }}</div>
+      {% endfor %} 
+    {% endif %} 
+  {% endwith %}
+
+  <form class="auth-form" method="POST" action="/login">
+    
+    <div class="form-group">
+      <label class="cb-label">Email</label>
+      <input type="email" name="email" class="dash-input" required placeholder="Email" />
+    </div>
+
+    <div class="form-group" style="margin-bottom: 0;">
+      <label class="cb-label">Password</label>
+      <div class="password-wrapper">
+        <input type="password" name="password" id="passwordInput" class="dash-input" required placeholder="Password" />
+        <button type="button" id="toggleBtn" class="text-toggle">Show</button>
+      </div>
+    </div>
+    
+    <a href="{{ url_for('auth.forgot_password') }}" class="forgot-link">Forgot Password?</a>
+
+    <button type="submit" class="btn btn-solid auth-btn">Login</button>
+  </form>
+
+  <div class="auth-footer">
+    <a href="{{ url_for('auth.register') }}">Don't have an account? <span>Register</span></a>
+  </div>
+</div>
+
+<script>
+  const passwordInput = document.getElementById('passwordInput');
+  const toggleBtn = document.getElementById('toggleBtn');
+
+  toggleBtn.addEventListener('click', function () {
+    const isPassword = passwordInput.getAttribute('type') === 'password';
+    passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+    toggleBtn.textContent = isPassword ? 'Hide' : 'Show';
+  });
+</script>
+{% endblock %}
