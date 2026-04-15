@@ -1,6 +1,6 @@
 {% extends 'base.html' %} 
 
-{% block title %}Create Chatbot | Quick Start{% endblock %} 
+{% block title %}Create Chatbot | {{ config.PROJECT_NAME | default('Bubbl') }}{% endblock %} 
 
 {% block content %}
 {% include 'partials/_chatbot_styles.html' %}

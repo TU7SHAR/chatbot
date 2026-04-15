@@ -19,7 +19,6 @@ def create_pipeline():
     visibility = request.form.get('visibility')
     system_prompt = request.form.get('system_prompt')
     
-    # Catch glassmorphism settings
     glass_opacity = request.form.get('glass_opacity', 35, type=int)
     glass_blur = request.form.get('glass_blur', 25, type=int)
     
@@ -70,8 +69,9 @@ def create_pipeline():
         glass_blur=glass_blur
     )
     db.session.add(new_ui)
+    
+    pipeline_logs = []
 
-    # 1. PROCESS UPLOADED FILES
     uploaded_files = request.files.getlist('file')
     for uploaded_file in uploaded_files:
         if uploaded_file and uploaded_file.filename != '':
@@ -86,10 +86,10 @@ def create_pipeline():
             
             try:
                 upload_to_gemini(filepath, new_bot.store_id)
+                pipeline_logs.append(f"[File] Vectorized successfully: {safe_name}")
             except Exception as e:
-                print(f"Gemini Upload Error for {filename}: {e}")
+                pipeline_logs.append(f"[Error] Gemini Upload Error for {safe_name}: {e}")
 
-    # 2. PROCESS RAW TEXT
     raw_text = request.form.get('raw_text')
     if raw_text and raw_text.strip():
         txt_filename = f"manual_knowledge_{uuid.uuid4().hex[:6]}.txt"
@@ -103,10 +103,10 @@ def create_pipeline():
         
         try:
             upload_to_gemini(txt_filepath, new_bot.store_id)
+            pipeline_logs.append(f"[Text] Vectorized snippet")
         except Exception as e:
-            print(f"Gemini Text Upload Error: {e}")
+            pipeline_logs.append(f"[Error] Gemini Text Upload Error: {e}")
 
-    # 3. PROCESS Q&A TEXT
     qa_text = request.form.get('qa_text')
     if qa_text and qa_text.strip():
         qa_filename = f"qa_knowledge_{uuid.uuid4().hex[:6]}.txt"
@@ -120,10 +120,10 @@ def create_pipeline():
         
         try:
             upload_to_gemini(qa_filepath, new_bot.store_id)
+            pipeline_logs.append("[Q&A] Vectorized custom Q&A pairs")
         except Exception as e:
-            print(f"Gemini Q&A Upload Error: {e}")
+            pipeline_logs.append(f"[Error] Gemini Q&A Upload Error: {e}")
 
-    # 4. PROCESS WEBSITE CRAWLER
     scrape_url = request.form.get('scrape_url')
     if scrape_url and scrape_url.strip():
         url_to_scrape = scrape_url.strip()
@@ -146,7 +146,7 @@ def create_pipeline():
     session['header_color'] = new_ui.header_color
     session['theme_mode'] = new_ui.theme_mode
 
-    return jsonify({"success": True, "bot_id": new_bot.id})
+    return jsonify({"success": True, "bot_id": new_bot.id, "logs": pipeline_logs})
 
 @admin_bp.route('/rename_bot/<int:bot_id>', methods=['POST'])
 def rename_bot(bot_id):
@@ -242,7 +242,6 @@ def update_bot(bot_id):
     bot.ui_settings.header_color = request.form.get('header_color', bot.ui_settings.header_color)
     bot.ui_settings.theme_mode = request.form.get('theme_mode', bot.ui_settings.theme_mode)
     
-    # --- THIS IS THE FIX FOR THE EDIT ROUTE ---
     bot.ui_settings.glass_opacity = request.form.get('glass_opacity', bot.ui_settings.glass_opacity, type=int)
     bot.ui_settings.glass_blur = request.form.get('glass_blur', bot.ui_settings.glass_blur, type=int)
 
@@ -297,7 +296,7 @@ def add_knowledge(bot_id):
 
     return redirect(url_for('admin_bp.edit_bot', bot_id=bot.id))
 
-@admin_bp.route('/delete_doc/<int:doc_id>', methods=['POST'])
+@admin_bp.route('/delete_doc/<int:doc_id>', methods=['GET', 'POST'])
 def delete_doc(doc_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

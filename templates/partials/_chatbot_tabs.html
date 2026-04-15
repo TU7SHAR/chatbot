@@ -19,13 +19,16 @@
       <div style="flex: 1; min-width: 320px; display: flex; align-items: center; justify-content: center;">
           <div class="f-graphic-container">
               <div class="f-grid"></div>
-              <div class="f-node globe">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-              </div>
-              <div class="f-line">
-                  <div class="f-packet"></div>
-              </div>
-              <div class="f-node bot">b.</div>
+              <svg width="300" height="150" viewBox="0 0 300 150" style="position: relative; z-index: 2;">
+                  <path id="data-path" d="M 50 75 L 250 75" stroke="#e5e7eb" stroke-width="3" fill="none" stroke-linecap="round"/>
+                  <circle r="6" fill="var(--orange)" filter="drop-shadow(0 0 4px var(--orange))">
+                      <animateMotion dur="2s" repeatCount="indefinite" path="M 50 75 L 250 75" />
+                  </circle>
+                  <rect x="20" y="45" width="60" height="60" rx="16" fill="#fff" stroke="rgba(232,114,42,0.2)" stroke-width="2" />
+                  <svg x="35" y="60" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                  <rect x="220" y="45" width="60" height="60" rx="16" fill="#111827" />
+                  <text x="250" y="82" fill="#fff" font-size="24" font-family="monospace" font-weight="bold" text-anchor="middle">b.</text>
+              </svg>
           </div>
       </div>
   </div>
@@ -125,11 +128,11 @@
                   <strong id="preview-name" style="font-size: 14px;">Y Combinator</strong>
               </div>
               <div class="mock-chat-body" id="mock-body" style="background: transparent;">
-                  <div class="mock-bubble-in" style="background: rgba(0,0,0,0.05);">Hey, check out this glass effect!</div>
+                  <div class="mock-bubble-in" id="mock-bubble-in" style="background: rgba(0,0,0,0.05);">Hey, check out this glass effect!</div>
                   <div class="mock-bubble-out" id="preview-bubble">Looks premium.</div>
               </div>
-              <div class="mock-chat-footer" style="background: transparent; border-top: 1px solid rgba(0,0,0,0.05);">
-                  <div class="mock-input">Type a message...</div>
+              <div class="mock-chat-footer" id="mock-footer" style="background: transparent; border-top: 1px solid rgba(0,0,0,0.05);">
+                  <div class="mock-input" id="mock-input-field">Type a message...</div>
               </div>
           </div>
       </div>

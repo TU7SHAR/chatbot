@@ -31,7 +31,7 @@
             <label class="cb-dropzone">
               <span class="upload-icon" style="font-size: 24px; margin-bottom: 8px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span>
               <div style="font-size: 14px; color: #111827; margin-bottom: 4px;">Drag & drop files here, or click to select files</div>
-              <input type="file" id="file_input" multiple style="display: none;" onchange="updateCbFileList(event)" />
+              <input type="file" id="file_input" multiple accept=".txt,.doc,.docx,.xls,.xlsx,.md,.html,.pdf" style="display: none;" onchange="updateCbFileList(event)" />
             </label>
           </div>
         </div>
@@ -110,7 +110,7 @@
               </div>
             </div>
             <div style="padding: 15px; text-align: right; background: #f9fafb; border-top: 1px solid #e5e7eb;">
-              <button type="button" id="btn-add-link" class="btn-modal-action" style="background: #111827;" onclick="addLinkSnippet()">Add Link</button>
+              <button type="button" id="btn-add-link" class="btn-modal-action" style="background: #111827;" onclick="addLinkSnippet()">Add Links</button>
             </div>
           </div>
         </div>

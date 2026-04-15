@@ -2,7 +2,6 @@
   let globalAttachedFiles = [], tempAttachedFiles = [], selectedFileIndices = new Set();
   let globalTextSnippets = [], tempTextSnippets = [], editingTextIndex = -1;
   let globalLinks = [], tempLinks = [], selectedLinkIndices = new Set(), editingLinkIndex = -1;
-  
   let abortProcess = false;
   let createdBotId = null;
   let permanentLogs = [];
@@ -113,17 +112,52 @@
     });
   }
 
-  function addLinkSnippet() {
-    const urlEl = document.getElementById('scrape_url'), deepCrawlEl = document.getElementById('use_deep_crawl'), maxUrlsEl = document.getElementById('max_urls');
+  async function addLinkSnippet() {
+    const urlEl = document.getElementById('scrape_url'), deepCrawlEl = document.getElementById('use_deep_crawl'), maxUrlsEl = document.getElementById('max_urls'), btn = document.getElementById('btn-add-link');
     let url = urlEl.value.trim();
     if (!url) { alert("Please enter a valid URL."); return; }
-    if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) { url = 'https://' + url; }
 
-    const linkData = { url: url, isDeep: deepCrawlEl.checked, maxPages: parseInt(maxUrlsEl.value) || 20, addedAt: Date.now(), isNew: true };
-    if (editingLinkIndex >= 0) { tempLinks[editingLinkIndex] = linkData; editingLinkIndex = -1; document.getElementById('btn-add-link').innerText = "Add Link"; } 
-    else { tempLinks.push(linkData); }
+    const isDeep = deepCrawlEl.checked, maxPages = parseInt(maxUrlsEl.value) || 20;
+    btn.innerText = "Extracting..."; btn.disabled = true;
+    let extractedUrls = [];
+
+    try {
+        if (isDeep || url.endsWith('.xml')) {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl); 
+            if (!response.ok) throw new Error("Proxy error");
+            const content = await response.text(); 
+            const linksSet = new Set();
+            
+            if (url.endsWith('.xml') || content.includes('<urlset')) {
+                const xmlDoc = new DOMParser().parseFromString(content, "text/xml"); const locs = xmlDoc.getElementsByTagName("loc");
+                for (let i = 0; i < locs.length; i++) { if(locs[i].textContent) linksSet.add(locs[i].textContent.trim()); }
+            } else if (isDeep) {
+                linksSet.add(url);
+                const doc = new DOMParser().parseFromString(content, "text/html"); const anchors = doc.querySelectorAll('a[href]');
+                const baseUrlObj = new URL(url); const baseHost = baseUrlObj.hostname.replace(/^www\./, '');
+                anchors.forEach(a => {
+                    try {
+                        let href = a.getAttribute('href');
+                        if (href && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('#')) {
+                            const resolvedUrl = new URL(href, baseUrlObj.origin); resolvedUrl.hash = ''; 
+                            if (resolvedUrl.hostname.replace(/^www\./, '') === baseHost) linksSet.add(resolvedUrl.href);
+                        }
+                    } catch(e) {}
+                });
+            }
+            extractedUrls = Array.from(linksSet).slice(0, maxPages);
+        } else { extractedUrls.push(url); }
+    } catch (error) { 
+        console.warn("Proxy blocked. Falling back to single URL.", error); 
+        extractedUrls = [url]; 
+    }
+
+    extractedUrls.forEach(extractedUrl => { if (!tempLinks.find(l => l.url === extractedUrl)) { tempLinks.push({ url: extractedUrl, addedAt: Date.now() + Math.random(), isNew: true, isDeep: isDeep }); } });
+    if (editingLinkIndex >= 0) { tempLinks.splice(editingLinkIndex, 1); editingLinkIndex = -1; }
     
-    urlEl.value = ''; deepCrawlEl.checked = false; maxUrlsEl.value = '20'; sortTempLinks(); 
+    urlEl.value = ''; deepCrawlEl.checked = false; maxUrlsEl.value = '20'; btn.innerText = "Add Links"; btn.disabled = false; sortTempLinks(); 
   }
   function sortTempLinks() {
     const sortVal = document.getElementById('linkSort').value;
@@ -150,12 +184,12 @@
   }
   function removeSingleLink(index) {
     tempLinks.splice(index, 1); selectedLinkIndices.clear(); 
-    if (editingLinkIndex === index) { editingLinkIndex = -1; document.getElementById('scrape_url').value = ''; document.getElementById('btn-add-link').innerText = "Add Link"; }
+    if (editingLinkIndex === index) { editingLinkIndex = -1; document.getElementById('scrape_url').value = ''; document.getElementById('btn-add-link').innerText = "Add Links"; }
     renderLinkUI(); updateLinkBulkActionsVisibility();
   }
   function editLinkSnippet(index) {
-    const link = tempLinks[index]; document.getElementById('scrape_url').value = link.url; document.getElementById('use_deep_crawl').checked = link.isDeep; document.getElementById('max_urls').value = link.maxPages;
-    editingLinkIndex = index; document.getElementById('btn-add-link').innerText = "Update Link"; document.getElementById('scrape_url').focus();
+    const link = tempLinks[index]; document.getElementById('scrape_url').value = link.url; document.getElementById('use_deep_crawl').checked = true; document.getElementById('max_urls').value = '20';
+    editingLinkIndex = index; document.getElementById('btn-add-link').innerText = "Update & Recrawl Link"; document.getElementById('scrape_url').focus();
   }
   function renderLinkUI() {
     const display = document.getElementById('link-list-display'), container = document.getElementById('link-sources-container'); display.innerHTML = '';
@@ -188,7 +222,7 @@
     document.querySelectorAll('.modal-inner-wrapper').forEach(el => el.style.display = 'none');
     if(modalId === 'modal-file') { tempAttachedFiles = globalAttachedFiles.map(item => ({...item, isNew: false})); selectedFileIndices.clear(); document.getElementById('fileSort').value = 'default'; sortTempFiles(); } 
     else if(modalId === 'modal-text') { tempTextSnippets = globalTextSnippets.map(s => ({...s})); editingTextIndex = -1; document.getElementById('snippet_title').value = ''; document.getElementById('snippet_text').value = ''; document.getElementById('btn-add-snippet').innerText = "+ Add Snippet"; renderTextUI(); } 
-    else if(modalId === 'modal-links') { tempLinks = globalLinks.map(l => ({...l, isNew: false})); selectedLinkIndices.clear(); document.getElementById('linkSort').value = 'default'; editingLinkIndex = -1; document.getElementById('scrape_url').value = ''; document.getElementById('use_deep_crawl').checked = false; document.getElementById('max_urls').value = '20'; document.getElementById('btn-add-link').innerText = "Add Link"; sortTempLinks(); }
+    else if(modalId === 'modal-links') { tempLinks = globalLinks.map(l => ({...l, isNew: false})); selectedLinkIndices.clear(); document.getElementById('linkSort').value = 'default'; editingLinkIndex = -1; document.getElementById('scrape_url').value = ''; document.getElementById('use_deep_crawl').checked = false; document.getElementById('max_urls').value = '20'; document.getElementById('btn-add-link').innerText = "Add Links"; sortTempLinks(); }
     document.getElementById(modalId).style.display = 'flex';
   }
   function closeModal() { document.getElementById('global-modal').classList.remove('active'); }
@@ -264,7 +298,7 @@
     const quickUrl = document.getElementById('quick_url').value.trim();
     if (quickUrl) {
       const finalUrl = quickUrl.startsWith('http') ? quickUrl : 'https://' + quickUrl;
-      globalLinks.push({ url: finalUrl, addedAt: Date.now(), isNew: false, isDeep: false, maxPages: 20 });
+      globalLinks.push({ url: finalUrl, addedAt: Date.now(), isNew: false, isDeep: false });
       updateDashboardBadges();
     }
     switchCbTab('tab-data');
@@ -278,9 +312,6 @@
 
   document.addEventListener("DOMContentLoaded", function() { syncUseCase(); updateLivePreview(); });
 
-  // =====================================
-  // TERMINAL & INGESTION POLLING LOGIC
-  // =====================================
   function addLogLine(text, color = "#38bdf8") {
       permanentLogs.push(`<span class="log-time">${getLogTime()}</span><span style="color: ${color}">${text}</span>`);
       renderTerminal();
@@ -308,7 +339,7 @@
   function minimizeToBackground() { document.getElementById('log-overlay').classList.remove('active'); document.getElementById('floating-log-btn').style.display = 'block'; }
   function restoreTerminal() { document.getElementById('log-overlay').classList.add('active'); document.getElementById('floating-log-btn').style.display = 'none'; }
 
-  document.getElementById("botPipelineForm").addEventListener("submit", async function (e) {
+ document.getElementById("botPipelineForm").addEventListener("submit", async function (e) {
     e.preventDefault();
     const btn = document.getElementById('final-create-btn'), nameInput = document.getElementById('bot_name');
     if (!nameInput.value.trim()) { switchCbTab('tab-ui'); nameInput.focus(); alert("Please enter a Chatbot Name in the User Interface tab."); return; }
@@ -318,13 +349,12 @@
     const formData = new FormData(this);
     formData.delete('file');
     globalAttachedFiles.forEach(item => { formData.append('file', item.fileObj); });
-    formData.delete('raw_text');
+    
+    formData.delete('text_snippets_data');
     if (globalTextSnippets.length > 0) {
-      const combinedText = globalTextSnippets.map(s => `Title: ${s.title}\nText:\n${s.text}`).join('\n\n---\n\n');
-      formData.append('raw_text', combinedText);
+      formData.append('text_snippets_data', JSON.stringify(globalTextSnippets));
     }
     
-    // We intentionally DO NOT send scrape_url to create_pipeline, we orchestrate it via the polling API
     formData.delete('scrape_url');
     formData.delete('use_deep_crawl');
     formData.delete('max_urls');
@@ -334,14 +364,50 @@
     permanentLogs = []; currentScrapeLogs = ""; abortProcess = false; createdBotId = null;
     
     addLogLine("Establishing secure connection to BotFactory...", "#10b981");
+    addLogLine("Initializing Bot Agent...", "#38bdf8");
+
+    // ==============================================================
+    // 1. SMART OPTIMISTIC LOGGING (THE "FAKE" QUEUE)
+    // ==============================================================
+    let fakeLogQueue = [];
+    globalAttachedFiles.forEach(item => fakeLogQueue.push(`[File] Uploading & Vectorizing: ${item.fileObj.name}`));
+    globalTextSnippets.forEach(item => fakeLogQueue.push(`[Text] Encoding snippet: ${item.title}`));
+    const qaInput = document.getElementById('qa_input');
+    if (qaInput && qaInput.value.trim()) fakeLogQueue.push(`[Q&A] Processing custom knowledge pairs`);
+
+    // Print one log every 1.8 seconds to keep the user entertained
+    let fakeLogInterval = setInterval(() => {
+        if (fakeLogQueue.length > 0) {
+            addLogLine(fakeLogQueue.shift(), "#f59e0b"); // Yellow processing color
+        }
+    }, 1800); 
+    // ==============================================================
 
     try {
       const response = await fetch("{{ url_for('admin_bp.create_pipeline') }}", { method: "POST", body: formData, headers: { "X-Requested-With": "XMLHttpRequest" }});
       const data = await response.json();
 
+      // ==============================================================
+      // 2. BACKEND RESPONDED - STOP THE FAKE WAITING INSTANTLY
+      // ==============================================================
+      clearInterval(fakeLogInterval);
+      
+      // If there are still files in the queue, dump them instantly so we don't delay the scraper
+      while(fakeLogQueue.length > 0) {
+          addLogLine(fakeLogQueue.shift() + " - Done", "#10b981"); 
+      }
+      // ==============================================================
+
       if (data.success) {
           createdBotId = data.bot_id;
-          addLogLine(`Bot successfully initialized in database (ID: ${createdBotId}).`, "#10b981");
+          
+          if (data.logs && data.logs.length > 0) {
+              data.logs.forEach(log => {
+                  if (log.includes("[Error]")) addLogLine(log, "#ef4444");
+              });
+          }
+
+          addLogLine(`Bot successfully initialized in database (ID: ${createdBotId}).`, "#38bdf8");
           
           if (globalLinks.length > 0 && !abortProcess) {
               addLogLine(`Found ${globalLinks.length} root web source(s). Initiating Scrape Workers...`, "#f59e0b");
@@ -370,7 +436,7 @@
                               if(sData.status === 'completed' || sData.status === 'failed') {
                                   clearInterval(poll);
                                   updateScrapeLogs("");
-                                  addLogLine(sData.logs, "#e2e8f0");
+                                  if(sData.logs) addLogLine(sData.logs, "#e2e8f0");
                                   if (sData.status === 'failed') addLogLine(`[Error] Job failed: ${sData.error}`, "#ef4444");
                                   resolve();
                               }
@@ -390,8 +456,9 @@
           setTimeout(() => { document.getElementById('log-overlay').classList.remove('active'); btn.innerText = "Create Chatbot"; btn.disabled = false; }, 3000);
       }
     } catch (err) {
+      clearInterval(fakeLogInterval);
       if(abortProcess) return;
-      console.error(err); addLogLine("[Fatal] Connection to processing core lost.", "#ef4444");
+      addLogLine("[Fatal] Connection to processing core lost.", "#ef4444");
       setTimeout(() => { document.getElementById('log-overlay').classList.remove('active'); btn.innerText = "Create Chatbot"; btn.disabled = false; }, 3000);
     }
   });
