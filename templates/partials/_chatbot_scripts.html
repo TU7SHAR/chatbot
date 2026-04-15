@@ -1,115 +1,64 @@
 <script>
-  // =====================================
-  // THE "DRAFT vs SAVED" ARCHITECTURE
-  // =====================================
-  let globalAttachedFiles = []; 
-  let tempAttachedFiles = []; 
-  let selectedFileIndices = new Set();
+  let globalAttachedFiles = [], tempAttachedFiles = [], selectedFileIndices = new Set();
+  let globalTextSnippets = [], tempTextSnippets = [], editingTextIndex = -1;
+  let globalLinks = [], tempLinks = [], selectedLinkIndices = new Set(), editingLinkIndex = -1;
+  
+  let abortProcess = false;
+  let createdBotId = null;
+  let permanentLogs = [];
+  let currentScrapeLogs = "";
 
-  let globalTextSnippets = [];
-  let tempTextSnippets = [];
-  let editingTextIndex = -1;
-
-  let globalLinks = [];
-  let tempLinks = [];
-  let selectedLinkIndices = new Set();
-  let editingLinkIndex = -1;
-
-  // =====================================
-  // FILE MANAGEMENT
-  // =====================================
-  function updateCbFileList(event) {
-    const newItems = Array.from(event.target.files).map(f => ({
-        fileObj: f,
-        addedAt: Date.now() + Math.random(),
-        isNew: true
-    }));
-    
-    tempAttachedFiles = tempAttachedFiles.concat(newItems);
-    document.getElementById('file_input').value = ''; 
-    sortTempFiles(); 
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes'; const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + ' ' + sizes[i];
+  }
+  function getLogTime() {
+    const d = new Date(); return `[${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}]`;
   }
 
+  function updateCbFileList(event) {
+    const newItems = Array.from(event.target.files).map(f => ({ fileObj: f, addedAt: Date.now() + Math.random(), isNew: true }));
+    tempAttachedFiles = tempAttachedFiles.concat(newItems);
+    document.getElementById('file_input').value = ''; sortTempFiles(); 
+  }
   function sortTempFiles() {
     const sortVal = document.getElementById('fileSort').value;
-    
     if (sortVal === 'name_asc') tempAttachedFiles.sort((a, b) => a.fileObj.name.localeCompare(b.fileObj.name));
     else if (sortVal === 'name_desc') tempAttachedFiles.sort((a, b) => b.fileObj.name.localeCompare(a.fileObj.name));
     else if (sortVal === 'size_asc') tempAttachedFiles.sort((a, b) => a.fileObj.size - b.fileObj.size);
     else if (sortVal === 'size_desc') tempAttachedFiles.sort((a, b) => b.fileObj.size - a.fileObj.size);
     else tempAttachedFiles.sort((a, b) => a.addedAt - b.addedAt);
-    
-    selectedFileIndices.clear();
-    updateFileBulkActionsVisibility();
-    renderFileUI();
+    selectedFileIndices.clear(); updateFileBulkActionsVisibility(); renderFileUI();
   }
-
-  function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + ' ' + sizes[i];
-  }
-
   function toggleFileSelection(index, checkbox) {
-    if(checkbox.checked) selectedFileIndices.add(index);
-    else selectedFileIndices.delete(index);
-    updateFileBulkActionsVisibility();
+    if(checkbox.checked) selectedFileIndices.add(index); else selectedFileIndices.delete(index); updateFileBulkActionsVisibility();
   }
-
   function toggleSelectAllFiles(checkbox) {
     const checkboxes = document.querySelectorAll('.file-row-checkbox');
-    if(checkbox.checked) {
-        tempAttachedFiles.forEach((_, i) => selectedFileIndices.add(i));
-        checkboxes.forEach(cb => cb.checked = true);
-    } else {
-        selectedFileIndices.clear();
-        checkboxes.forEach(cb => cb.checked = false);
-    }
+    if(checkbox.checked) { tempAttachedFiles.forEach((_, i) => selectedFileIndices.add(i)); checkboxes.forEach(cb => cb.checked = true); } 
+    else { selectedFileIndices.clear(); checkboxes.forEach(cb => cb.checked = false); }
     updateFileBulkActionsVisibility();
   }
-
   function updateFileBulkActionsVisibility() {
     const bulkDiv = document.getElementById('file-bulk-actions');
-    if(selectedFileIndices.size > 0) {
-        bulkDiv.style.display = 'block';
-    } else {
-        bulkDiv.style.display = 'none';
-        document.getElementById('selectAllFiles').checked = false;
-    }
+    if(selectedFileIndices.size > 0) { bulkDiv.style.display = 'block'; } 
+    else { bulkDiv.style.display = 'none'; document.getElementById('selectAllFiles').checked = false; }
   }
-
   function deleteSelectedFiles() {
     const indicesToRemove = Array.from(selectedFileIndices).sort((a, b) => b - a);
-    indicesToRemove.forEach(index => {
-        tempAttachedFiles.splice(index, 1);
-    });
-    selectedFileIndices.clear();
-    renderFileUI();
-    updateFileBulkActionsVisibility();
+    indicesToRemove.forEach(index => { tempAttachedFiles.splice(index, 1); });
+    selectedFileIndices.clear(); renderFileUI(); updateFileBulkActionsVisibility();
   }
-
   function removeSingleFile(index) {
-    tempAttachedFiles.splice(index, 1);
-    selectedFileIndices.clear(); 
-    renderFileUI();
-    updateFileBulkActionsVisibility();
+    tempAttachedFiles.splice(index, 1); selectedFileIndices.clear(); renderFileUI(); updateFileBulkActionsVisibility();
   }
-
   function renderFileUI() {
-    const display = document.getElementById('file-list-display');
-    const container = document.getElementById('file-sources-container');
-    display.innerHTML = '';
-    
-    container.style.display = tempAttachedFiles.length > 0 ? 'block' : 'none';
-
+    const display = document.getElementById('file-list-display'), container = document.getElementById('file-sources-container');
+    display.innerHTML = ''; container.style.display = tempAttachedFiles.length > 0 ? 'block' : 'none';
     tempAttachedFiles.forEach((item, index) => {
       const isSelected = selectedFileIndices.has(index);
       const newBadgeHTML = item.isNew ? `<span class="file-badge-new">New</span>` : '';
-
-      let fileDiv = document.createElement('div');
-      fileDiv.className = 'chatbase-file-row';
+      let fileDiv = document.createElement('div'); fileDiv.className = 'chatbase-file-row';
       fileDiv.innerHTML = `
         <div style="display: flex; align-items: center; gap: 16px; overflow: hidden; width: 100%;">
             <input type="checkbox" class="file-row-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleFileSelection(${index}, this)" style="accent-color: #111827; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;">
@@ -117,281 +66,109 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-weight: 500; font-size: 14px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">${item.fileObj.name}</span>
                     ${newBadgeHTML}
-                </div>
-                <span style="font-size: 12px; color: #6b7280;">${formatBytes(item.fileObj.size)}</span>
+                </div><span style="font-size: 12px; color: #6b7280;">${formatBytes(item.fileObj.size)}</span>
             </div>
             <button type="button" onclick="removeSingleFile(${index})" style="background: none; border: none; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
-        </div>
-      `;
+        </div>`;
       display.appendChild(fileDiv);
     });
-
     document.getElementById('selectAllFiles').checked = tempAttachedFiles.length > 0 && selectedFileIndices.size === tempAttachedFiles.length;
   }
 
-  // =====================================
-  // TEXT SNIPPET MANAGEMENT
-  // =====================================
   function addTextSnippet() {
-    const titleEl = document.getElementById('snippet_title');
-    const textEl = document.getElementById('snippet_text');
-    const title = titleEl.value.trim() || 'Untitled Snippet';
-    const text = textEl.value.trim();
-
+    const titleEl = document.getElementById('snippet_title'), textEl = document.getElementById('snippet_text');
+    const title = titleEl.value.trim() || 'Untitled Snippet', text = textEl.value.trim();
     if (!text) { alert("Please enter some text."); return; }
-
-    if (editingTextIndex >= 0) {
-      tempTextSnippets[editingTextIndex] = { title, text };
-      editingTextIndex = -1;
-      document.getElementById('btn-add-snippet').innerText = "+ Add Snippet";
-    } else {
-      tempTextSnippets.push({ title, text });
-    }
-    
-    titleEl.value = '';
-    textEl.value = '';
-    renderTextUI();
+    if (editingTextIndex >= 0) { tempTextSnippets[editingTextIndex] = { title, text }; editingTextIndex = -1; document.getElementById('btn-add-snippet').innerText = "+ Add Snippet"; } 
+    else { tempTextSnippets.push({ title, text }); }
+    titleEl.value = ''; textEl.value = ''; renderTextUI();
   }
-
   function editTextSnippet(index) {
-    const snippet = tempTextSnippets[index];
-    document.getElementById('snippet_title').value = snippet.title;
-    document.getElementById('snippet_text').value = snippet.text;
-    editingTextIndex = index;
-    document.getElementById('btn-add-snippet').innerText = "Update Snippet";
-    document.getElementById('snippet_title').focus();
+    const snippet = tempTextSnippets[index]; document.getElementById('snippet_title').value = snippet.title; document.getElementById('snippet_text').value = snippet.text;
+    editingTextIndex = index; document.getElementById('btn-add-snippet').innerText = "Update Snippet"; document.getElementById('snippet_title').focus();
   }
-
   function removeTextSnippet(index) {
     tempTextSnippets.splice(index, 1);
-    if (editingTextIndex === index) {
-      editingTextIndex = -1;
-      document.getElementById('snippet_title').value = '';
-      document.getElementById('snippet_text').value = '';
-      document.getElementById('btn-add-snippet').innerText = "+ Add Snippet";
-    }
+    if (editingTextIndex === index) { editingTextIndex = -1; document.getElementById('snippet_title').value = ''; document.getElementById('snippet_text').value = ''; document.getElementById('btn-add-snippet').innerText = "+ Add Snippet"; }
     renderTextUI();
   }
-
   function renderTextUI() {
-    const display = document.getElementById('text-list-display');
-    display.innerHTML = '';
-    
+    const display = document.getElementById('text-list-display'); display.innerHTML = '';
     tempTextSnippets.forEach((snippet, index) => {
-      let div = document.createElement('div');
-      div.className = 'dynamic-file-item';
+      let div = document.createElement('div'); div.className = 'chatbase-file-row'; div.style.width = '100%';
       div.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 4px; overflow: hidden; width: 85%;">
-          <span style="font-weight: 600; font-size: 13px; color: #111827;">${snippet.title}</span>
-          <span style="font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${snippet.text}</span>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-weight: 500; font-size: 14px; color: #111827; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${snippet.title}</span>
+          <span style="font-size: 12px; color: #6b7280; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${snippet.text}</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
           <button type="button" onclick="editTextSnippet(${index})" style="background:none; border:none; color:var(--orange); cursor:pointer; font-size:12px; font-weight:600;">Edit</button>
-          <button type="button" onclick="removeTextSnippet(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-weight:800; font-size:16px;">×</button>
-        </div>
-      `;
+          <button type="button" onclick="removeTextSnippet(${index})" style="background: none; border: none; color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>`;
       display.appendChild(div);
     });
   }
 
-  // =====================================
-  // LINKS MANAGEMENT & DOM PARSER CRAWLER
-  // =====================================
-  async function addLinkSnippet() {
-    const urlEl = document.getElementById('scrape_url');
-    const deepCrawlEl = document.getElementById('use_deep_crawl');
-    const maxUrlsEl = document.getElementById('max_urls');
-    const btn = document.getElementById('btn-add-link');
-    
+  function addLinkSnippet() {
+    const urlEl = document.getElementById('scrape_url'), deepCrawlEl = document.getElementById('use_deep_crawl'), maxUrlsEl = document.getElementById('max_urls');
     let url = urlEl.value.trim();
     if (!url) { alert("Please enter a valid URL."); return; }
-    if (!url.startsWith('http://') && !url.startsWith('https://')) { url = 'https://' + url; }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
 
-    const isDeep = deepCrawlEl.checked;
-    const maxPages = parseInt(maxUrlsEl.value) || 20;
-
-    btn.innerText = "Extracting...";
-    btn.disabled = true;
-
-    let extractedUrls = [];
-
-    // Crawl Logic (Bypasses CORS via Proxy)
-    try {
-        if (isDeep || url.endsWith('.xml')) {
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-            const response = await fetch(proxyUrl);
-            const data = await response.json();
-            const content = data.contents;
-
-            const linksSet = new Set();
-            
-            // 1. Sitemap Parsing
-            if (url.endsWith('.xml') || content.includes('<urlset')) {
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(content, "text/xml");
-                const locs = xmlDoc.getElementsByTagName("loc");
-                for (let i = 0; i < locs.length; i++) {
-                    if(locs[i].textContent) linksSet.add(locs[i].textContent.trim());
-                }
-            } 
-            // 2. HTML DOM Parsing (Strips www. for accurate internal link matching)
-            else if (isDeep) {
-                linksSet.add(url);
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(content, "text/html");
-                const anchors = doc.querySelectorAll('a[href]');
-                
-                const baseUrlObj = new URL(url);
-                const baseHost = baseUrlObj.hostname.replace(/^www\./, '');
-                
-                anchors.forEach(a => {
-                    try {
-                        let href = a.getAttribute('href');
-                        if (href && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('#')) {
-                            const resolvedUrl = new URL(href, baseUrlObj.origin);
-                            resolvedUrl.hash = ''; // Remove page anchors
-                            const linkHost = resolvedUrl.hostname.replace(/^www\./, '');
-                            
-                            // If it matches the root domain, add it!
-                            if (linkHost === baseHost) {
-                                linksSet.add(resolvedUrl.href);
-                            }
-                        }
-                    } catch(e) {}
-                });
-            }
-            
-            // Limit to User's Max Pages
-            extractedUrls = Array.from(linksSet).slice(0, maxPages);
-        } else {
-            extractedUrls.push(url);
-        }
-    } catch (error) {
-        console.error("Scraping error:", error);
-        extractedUrls = [url]; // Fallback to just the main link if site blocks proxy
-    }
-
-    // Add each crawled URL to the UI array
-    extractedUrls.forEach(extractedUrl => {
-        if (!tempLinks.find(l => l.url === extractedUrl)) {
-            tempLinks.push({
-                url: extractedUrl,
-                addedAt: Date.now() + Math.random(),
-                isNew: true
-            });
-        }
-    });
-
-    if (editingLinkIndex >= 0) {
-      tempLinks.splice(editingLinkIndex, 1);
-      editingLinkIndex = -1;
-    }
+    const linkData = { url: url, isDeep: deepCrawlEl.checked, maxPages: parseInt(maxUrlsEl.value) || 20, addedAt: Date.now(), isNew: true };
+    if (editingLinkIndex >= 0) { tempLinks[editingLinkIndex] = linkData; editingLinkIndex = -1; document.getElementById('btn-add-link').innerText = "Add Link"; } 
+    else { tempLinks.push(linkData); }
     
-    urlEl.value = '';
-    deepCrawlEl.checked = false;
-    maxUrlsEl.value = '20';
-    btn.innerText = "Add Links";
-    btn.disabled = false;
-    
-    sortTempLinks(); 
+    urlEl.value = ''; deepCrawlEl.checked = false; maxUrlsEl.value = '20'; sortTempLinks(); 
   }
-
   function sortTempLinks() {
     const sortVal = document.getElementById('linkSort').value;
-    
     if (sortVal === 'url_asc') tempLinks.sort((a, b) => a.url.localeCompare(b.url));
     else if (sortVal === 'url_desc') tempLinks.sort((a, b) => b.url.localeCompare(a.url));
     else tempLinks.sort((a, b) => a.addedAt - b.addedAt);
-    
-    selectedLinkIndices.clear();
-    updateLinkBulkActionsVisibility();
-    renderLinkUI();
+    selectedLinkIndices.clear(); updateLinkBulkActionsVisibility(); renderLinkUI();
   }
-
-  function toggleLinkSelection(index, checkbox) {
-    if(checkbox.checked) selectedLinkIndices.add(index);
-    else selectedLinkIndices.delete(index);
-    updateLinkBulkActionsVisibility();
-  }
-
+  function toggleLinkSelection(index, checkbox) { if(checkbox.checked) selectedLinkIndices.add(index); else selectedLinkIndices.delete(index); updateLinkBulkActionsVisibility(); }
   function toggleSelectAllLinks(checkbox) {
     const checkboxes = document.querySelectorAll('.link-row-checkbox');
-    if(checkbox.checked) {
-        tempLinks.forEach((_, i) => selectedLinkIndices.add(i));
-        checkboxes.forEach(cb => cb.checked = true);
-    } else {
-        selectedLinkIndices.clear();
-        checkboxes.forEach(cb => cb.checked = false);
-    }
+    if(checkbox.checked) { tempLinks.forEach((_, i) => selectedLinkIndices.add(i)); checkboxes.forEach(cb => cb.checked = true); } 
+    else { selectedLinkIndices.clear(); checkboxes.forEach(cb => cb.checked = false); }
     updateLinkBulkActionsVisibility();
   }
-
   function updateLinkBulkActionsVisibility() {
     const bulkDiv = document.getElementById('link-bulk-actions');
-    if(selectedLinkIndices.size > 0) {
-        bulkDiv.style.display = 'block';
-    } else {
-        bulkDiv.style.display = 'none';
-        document.getElementById('selectAllLinks').checked = false;
-    }
+    if(selectedLinkIndices.size > 0) { bulkDiv.style.display = 'block'; } else { bulkDiv.style.display = 'none'; document.getElementById('selectAllLinks').checked = false; }
   }
-
   function deleteSelectedLinks() {
     const indicesToRemove = Array.from(selectedLinkIndices).sort((a, b) => b - a);
-    indicesToRemove.forEach(index => {
-        tempLinks.splice(index, 1);
-    });
-    selectedLinkIndices.clear();
-    renderLinkUI();
-    updateLinkBulkActionsVisibility();
+    indicesToRemove.forEach(index => { tempLinks.splice(index, 1); });
+    selectedLinkIndices.clear(); renderLinkUI(); updateLinkBulkActionsVisibility();
   }
-
   function removeSingleLink(index) {
-    tempLinks.splice(index, 1);
-    selectedLinkIndices.clear(); 
-    if (editingLinkIndex === index) {
-      editingLinkIndex = -1;
-      document.getElementById('scrape_url').value = '';
-      document.getElementById('use_deep_crawl').checked = false;
-      document.getElementById('max_urls').value = '20';
-      document.getElementById('btn-add-link').innerText = "Add Links";
-    }
-    renderLinkUI();
-    updateLinkBulkActionsVisibility();
+    tempLinks.splice(index, 1); selectedLinkIndices.clear(); 
+    if (editingLinkIndex === index) { editingLinkIndex = -1; document.getElementById('scrape_url').value = ''; document.getElementById('btn-add-link').innerText = "Add Link"; }
+    renderLinkUI(); updateLinkBulkActionsVisibility();
   }
-
   function editLinkSnippet(index) {
-    const link = tempLinks[index];
-    document.getElementById('scrape_url').value = link.url;
-    document.getElementById('use_deep_crawl').checked = true; // Assume edit requires a fresh deep crawl option
-    document.getElementById('max_urls').value = '20';
-    editingLinkIndex = index;
-    document.getElementById('btn-add-link').innerText = "Update & Recrawl Link";
-    document.getElementById('scrape_url').focus();
+    const link = tempLinks[index]; document.getElementById('scrape_url').value = link.url; document.getElementById('use_deep_crawl').checked = link.isDeep; document.getElementById('max_urls').value = link.maxPages;
+    editingLinkIndex = index; document.getElementById('btn-add-link').innerText = "Update Link"; document.getElementById('scrape_url').focus();
   }
-
   function renderLinkUI() {
-    const display = document.getElementById('link-list-display');
-    const container = document.getElementById('link-sources-container');
-    display.innerHTML = '';
-    
+    const display = document.getElementById('link-list-display'), container = document.getElementById('link-sources-container'); display.innerHTML = '';
     container.style.display = tempLinks.length > 0 ? 'block' : 'none';
-
     tempLinks.forEach((link, index) => {
-      const isSelected = selectedLinkIndices.has(index);
-      const newBadgeHTML = link.isNew ? `<span class="file-badge-new">New</span>` : '';
-
-      let div = document.createElement('div');
-      div.className = 'chatbase-file-row';
+      const isSelected = selectedLinkIndices.has(index); const newBadgeHTML = link.isNew ? `<span class="file-badge-new">New</span>` : '';
+      let div = document.createElement('div'); div.className = 'chatbase-file-row';
       div.innerHTML = `
         <div style="display: flex; align-items: center; gap: 16px; overflow: hidden; width: 100%;">
             <input type="checkbox" class="link-row-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleLinkSelection(${index}, this)" style="accent-color: #111827; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0;">
             <div style="display: flex; flex-direction: column; gap: 4px; overflow: hidden; flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-weight: 500; font-size: 14px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">${link.url}</span>
-                    ${newBadgeHTML}
+                    <span style="font-weight: 500; font-size: 14px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;">${link.url}</span>${newBadgeHTML}
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
@@ -400,115 +177,44 @@
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
-        </div>
-      `;
+        </div>`;
       display.appendChild(div);
     });
-
     document.getElementById('selectAllLinks').checked = tempLinks.length > 0 && selectedLinkIndices.size === tempLinks.length;
   }
 
-  // =====================================
-  // MODAL LOGIC (OPEN & CONFIRM)
-  // =====================================
   function openModal(modalId) {
     document.getElementById('global-modal').classList.add('active');
     document.querySelectorAll('.modal-inner-wrapper').forEach(el => el.style.display = 'none');
-    
-    if(modalId === 'modal-file') {
-        tempAttachedFiles = globalAttachedFiles.map(item => ({...item, isNew: false})); 
-        selectedFileIndices.clear();
-        document.getElementById('fileSort').value = 'default';
-        sortTempFiles(); 
-    } else if(modalId === 'modal-text') {
-        tempTextSnippets = globalTextSnippets.map(s => ({...s})); 
-        editingTextIndex = -1;
-        document.getElementById('snippet_title').value = '';
-        document.getElementById('snippet_text').value = '';
-        document.getElementById('btn-add-snippet').innerText = "+ Add Snippet";
-        renderTextUI();
-    } else if(modalId === 'modal-links') {
-        tempLinks = globalLinks.map(l => ({...l, isNew: false}));
-        selectedLinkIndices.clear();
-        document.getElementById('linkSort').value = 'default';
-        editingLinkIndex = -1;
-        document.getElementById('scrape_url').value = '';
-        document.getElementById('use_deep_crawl').checked = false;
-        document.getElementById('max_urls').value = '20';
-        document.getElementById('btn-add-link').innerText = "Add Links";
-        sortTempLinks();
-    }
-
+    if(modalId === 'modal-file') { tempAttachedFiles = globalAttachedFiles.map(item => ({...item, isNew: false})); selectedFileIndices.clear(); document.getElementById('fileSort').value = 'default'; sortTempFiles(); } 
+    else if(modalId === 'modal-text') { tempTextSnippets = globalTextSnippets.map(s => ({...s})); editingTextIndex = -1; document.getElementById('snippet_title').value = ''; document.getElementById('snippet_text').value = ''; document.getElementById('btn-add-snippet').innerText = "+ Add Snippet"; renderTextUI(); } 
+    else if(modalId === 'modal-links') { tempLinks = globalLinks.map(l => ({...l, isNew: false})); selectedLinkIndices.clear(); document.getElementById('linkSort').value = 'default'; editingLinkIndex = -1; document.getElementById('scrape_url').value = ''; document.getElementById('use_deep_crawl').checked = false; document.getElementById('max_urls').value = '20'; document.getElementById('btn-add-link').innerText = "Add Link"; sortTempLinks(); }
     document.getElementById(modalId).style.display = 'flex';
   }
-
-  function closeModal() {
-    document.getElementById('global-modal').classList.remove('active');
-  }
+  function closeModal() { document.getElementById('global-modal').classList.remove('active'); }
 
   function updateDashboardBadges() {
-    const fileSpan = document.getElementById('status-file');
-    fileSpan.innerHTML = globalAttachedFiles.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalAttachedFiles.length} Added` : '';
-
-    const textSpan = document.getElementById('status-text');
-    textSpan.innerHTML = globalTextSnippets.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalTextSnippets.length} Added` : '';
-
-    const linksSpan = document.getElementById('status-links');
-    linksSpan.innerHTML = globalLinks.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalLinks.length} Added` : '';
+    document.getElementById('status-file').innerHTML = globalAttachedFiles.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalAttachedFiles.length} Added` : '';
+    document.getElementById('status-text').innerHTML = globalTextSnippets.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalTextSnippets.length} Added` : '';
+    document.getElementById('status-links').innerHTML = globalLinks.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalLinks.length} Added` : '';
   }
 
   function saveSource(type) {
     let hasData = false;
-
-    if (type === 'file') {
-      globalAttachedFiles = tempAttachedFiles.map(item => ({...item, isNew: false}));
-      if (globalAttachedFiles.length > 0) hasData = true; 
-    } else if (type === 'text') {
-      globalTextSnippets = tempTextSnippets.map(s => ({...s}));
-      if (globalTextSnippets.length > 0) hasData = true;
-    } else if (type === 'links') {
-      globalLinks = tempLinks.map(l => ({...l, isNew: false}));
-      if (globalLinks.length > 0) hasData = true;
-    } else if (type === 'qa') {
-      const qaInput = document.getElementById('qa_input');
-      if (qaInput && qaInput.value.trim().length > 0) hasData = true;
-    }
-
-    if (hasData && type === 'qa') {
-        const statusSpan = document.getElementById('status-qa');
-        statusSpan.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Added`;
-    }
-    
-    updateDashboardBadges();
-    closeModal();
+    if (type === 'file') { globalAttachedFiles = tempAttachedFiles.map(item => ({...item, isNew: false})); if (globalAttachedFiles.length > 0) hasData = true; } 
+    else if (type === 'text') { globalTextSnippets = tempTextSnippets.map(s => ({...s})); if (globalTextSnippets.length > 0) hasData = true; } 
+    else if (type === 'links') { globalLinks = tempLinks.map(l => ({...l, isNew: false})); if (globalLinks.length > 0) hasData = true; } 
+    else if (type === 'qa') { const qaInput = document.getElementById('qa_input'); if (qaInput && qaInput.value.trim().length > 0) hasData = true; }
+    if (hasData && type === 'qa') document.getElementById('status-qa').innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Added`;
+    updateDashboardBadges(); closeModal();
   }
 
-  // =====================================
-  // UI & PREVIEW LOGIC
-  // =====================================
   function updateLivePreview() {
-    const name = document.getElementById('bot_name').value || "Y Combinator";
-    const color = document.getElementById('theme_color').value;
-    const opacity = document.getElementById('glass_opacity').value;
-    const blur = document.getElementById('glass_blur').value;
-    const theme = document.getElementById('theme_mode').value;
-
-    document.getElementById('preview-name').innerText = name;
-    document.getElementById('hex-display').innerText = color.toUpperCase();
-    document.getElementById('val-opacity').innerText = opacity + "%";
-    document.getElementById('val-blur').innerText = blur + "px";
-
-    document.getElementById('preview-bubble').style.backgroundColor = color;
-    document.getElementById('preview-avatar').style.backgroundColor = color;
-    document.getElementById('preview-avatar-setting').style.backgroundColor = color;
-
-    const widget = document.getElementById('mock-widget');
-    const alpha = opacity / 100;
-    const bgColor = (theme === 'dark') ? `rgba(17, 24, 39, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
-    
-    widget.style.backgroundColor = bgColor;
-    widget.style.backdropFilter = `blur(${blur}px)`;
-    widget.style.webkitBackdropFilter = `blur(${blur}px)`;
+    const name = document.getElementById('bot_name').value || "Y Combinator", color = document.getElementById('theme_color').value, opacity = document.getElementById('glass_opacity').value, blur = document.getElementById('glass_blur').value, theme = document.getElementById('theme_mode').value;
+    document.getElementById('preview-name').innerText = name; document.getElementById('hex-display').innerText = color.toUpperCase(); document.getElementById('val-opacity').innerText = opacity + "%"; document.getElementById('val-blur').innerText = blur + "px";
+    document.getElementById('preview-bubble').style.backgroundColor = color; document.getElementById('preview-avatar').style.backgroundColor = color; document.getElementById('preview-avatar-setting').style.backgroundColor = color;
+    const widget = document.getElementById('mock-widget'), alpha = opacity / 100, bgColor = (theme === 'dark') ? `rgba(17, 24, 39, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
+    widget.style.backgroundColor = bgColor; widget.style.backdropFilter = `blur(${blur}px)`; widget.style.webkitBackdropFilter = `blur(${blur}px)`;
   }
 
   function previewAvatar(event) {
@@ -516,84 +222,31 @@
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const imgUrl = e.target.result;
-            const avatars = [document.getElementById('preview-avatar'), document.getElementById('preview-avatar-setting')];
-            avatars.forEach(av => {
-                av.style.backgroundImage = `url(${imgUrl})`;
-                av.style.backgroundSize = 'cover';
-                av.style.backgroundPosition = 'center';
-                av.innerText = ''; 
-            });
+            const imgUrl = e.target.result, avatars = [document.getElementById('preview-avatar'), document.getElementById('preview-avatar-setting')];
+            avatars.forEach(av => { av.style.backgroundImage = `url(${imgUrl})`; av.style.backgroundSize = 'cover'; av.style.backgroundPosition = 'center'; av.innerText = ''; });
         }
         reader.readAsDataURL(file);
     }
   }
 
   function setPreviewTheme(theme) {
-    const lightBtn = document.getElementById('btn-theme-light');
-    const darkBtn = document.getElementById('btn-theme-dark');
-    const widget = document.getElementById('mock-widget');
-    const header = document.getElementById('mock-header');
-    const body = document.getElementById('mock-body');
-    const footer = document.getElementById('mock-footer');
-    const bubbleIn = document.getElementById('mock-bubble-in');
-    const inputField = document.getElementById('mock-input-field');
-
+    const lightBtn = document.getElementById('btn-theme-light'), darkBtn = document.getElementById('btn-theme-dark');
+    const widget = document.getElementById('mock-widget'), header = document.getElementById('mock-header'), body = document.getElementById('mock-body'), footer = document.getElementById('mock-footer'), bubbleIn = document.getElementById('mock-bubble-in'), inputField = document.getElementById('mock-input-field');
     document.getElementById('theme_mode').value = theme;
-
     if (theme === 'dark') {
-        lightBtn.style.background = 'transparent';
-        lightBtn.style.border = '1px solid transparent';
-        lightBtn.style.opacity = '0.6';
-        darkBtn.style.background = '#fff';
-        darkBtn.style.border = '1px solid rgba(0,0,0,0.1)';
-        darkBtn.style.opacity = '1';
-
-        widget.style.background = '#111827';
-        widget.style.borderColor = '#374151';
-        header.style.borderBottomColor = '#374151';
-        document.getElementById('preview-name').style.color = '#f9fafb';
-        body.style.background = '#1f2937';
-        footer.style.borderTopColor = '#374151';
-        bubbleIn.style.background = '#374151';
-        bubbleIn.style.color = '#f9fafb';
-        if(inputField) { inputField.style.background = '#374151'; inputField.style.color = '#9ca3af'; }
+        lightBtn.style.background = 'transparent'; lightBtn.style.border = '1px solid transparent'; lightBtn.style.opacity = '0.6'; darkBtn.style.background = '#fff'; darkBtn.style.border = '1px solid rgba(0,0,0,0.1)'; darkBtn.style.opacity = '1';
+        widget.style.background = '#111827'; widget.style.borderColor = '#374151'; header.style.borderBottomColor = '#374151'; document.getElementById('preview-name').style.color = '#f9fafb'; body.style.background = '#1f2937'; footer.style.borderTopColor = '#374151'; bubbleIn.style.background = '#374151'; bubbleIn.style.color = '#f9fafb'; if(inputField) { inputField.style.background = '#374151'; inputField.style.color = '#9ca3af'; }
     } else {
-        darkBtn.style.background = 'transparent';
-        darkBtn.style.border = '1px solid transparent';
-        darkBtn.style.opacity = '0.6';
-        lightBtn.style.background = '#fff';
-        lightBtn.style.border = '1px solid rgba(0,0,0,0.1)';
-        lightBtn.style.opacity = '1';
-
-        widget.style.background = '#fff';
-        widget.style.borderColor = 'rgba(0,0,0,0.05)';
-        header.style.borderBottomColor = 'rgba(0,0,0,0.05)';
-        document.getElementById('preview-name').style.color = '#111827';
-        body.style.background = '#f9fafb';
-        footer.style.borderTopColor = 'rgba(0,0,0,0.05)';
-        bubbleIn.style.background = '#e5e7eb';
-        bubbleIn.style.color = '#111827';
-        if(inputField) { inputField.style.background = '#f3f4f6'; inputField.style.color = '#9ca3af'; }
+        darkBtn.style.background = 'transparent'; darkBtn.style.border = '1px solid transparent'; darkBtn.style.opacity = '0.6'; lightBtn.style.background = '#fff'; lightBtn.style.border = '1px solid rgba(0,0,0,0.1)'; lightBtn.style.opacity = '1';
+        widget.style.background = '#fff'; widget.style.borderColor = 'rgba(0,0,0,0.05)'; header.style.borderBottomColor = 'rgba(0,0,0,0.05)'; document.getElementById('preview-name').style.color = '#111827'; body.style.background = '#f9fafb'; footer.style.borderTopColor = 'rgba(0,0,0,0.05)'; bubbleIn.style.background = '#e5e7eb'; bubbleIn.style.color = '#111827'; if(inputField) { inputField.style.background = '#f3f4f6'; inputField.style.color = '#9ca3af'; }
     }
   }
 
   function generateCbPrompt() {
-    const typeEl = document.getElementById("bot_type");
-    const nameEl = document.getElementById("bot_name");
-    const promptEl = document.getElementById("system_prompt");
-    
+    const typeEl = document.getElementById("bot_type"), nameEl = document.getElementById("bot_name"), promptEl = document.getElementById("system_prompt");
     if (!typeEl || !promptEl) return;
-    
-    const type = typeEl.value;
-    const name = nameEl ? (nameEl.value || "the Assistant") : "the Assistant";
-    
-    const prompts = {
-      general: `You are ${name}, a helpful AI assistant. Use the provided Knowledge Base to answer questions concisely.`,
-      sales: `You are ${name}, a persuasive sales rep. Use the Knowledge Base to highlight product benefits and guide users.`,
-      support: `You are ${name}, a helpful support agent. Use the Knowledge Base to solve technical issues step-by-step.`,
-    };
-    
+    const type = typeEl.value, name = nameEl ? (nameEl.value || "the Assistant") : "the Assistant";
+    const prompts = { general: `You are ${name}, a helpful AI assistant. Use the provided Knowledge Base to answer questions concisely.`, sales: `You are ${name}, a persuasive sales rep. Use the Knowledge Base to highlight product benefits and guide users.`, support: `You are ${name}, a helpful support agent. Use the Knowledge Base to solve technical issues step-by-step.`, };
     promptEl.value = prompts[type] || prompts.general;
   }
 
@@ -605,17 +258,13 @@
     document.getElementById(tabId).classList.add('active');
   }
 
-  function syncUseCase() {
-    const selectedMode = document.getElementById('quick_usecase').value;
-    document.getElementById('bot_type').value = selectedMode;
-    generateCbPrompt();
-  }
+  function syncUseCase() { const selectedMode = document.getElementById('quick_usecase').value; document.getElementById('bot_type').value = selectedMode; generateCbPrompt(); }
 
   function handleQuickContinue() {
     const quickUrl = document.getElementById('quick_url').value.trim();
     if (quickUrl) {
       const finalUrl = quickUrl.startsWith('http') ? quickUrl : 'https://' + quickUrl;
-      globalLinks.push({ url: finalUrl, addedAt: Date.now(), isNew: false });
+      globalLinks.push({ url: finalUrl, addedAt: Date.now(), isNew: false, isDeep: false, maxPages: 20 });
       updateDashboardBadges();
     }
     switchCbTab('tab-data');
@@ -623,77 +272,127 @@
 
   function validateAndNext() {
     const nameInput = document.getElementById('bot_name');
-    if (!nameInput.value.trim()) {
-      alert("Please enter an Agent Name before continuing.");
-      nameInput.focus();
-      return;
-    }
+    if (!nameInput.value.trim()) { alert("Please enter an Agent Name before continuing."); nameInput.focus(); return; }
     switchCbTab('tab-settings');
   }
 
-  document.addEventListener("DOMContentLoaded", function() {
-    syncUseCase(); 
-    updateLivePreview(); 
-  });
+  document.addEventListener("DOMContentLoaded", function() { syncUseCase(); updateLivePreview(); });
 
   // =====================================
-  // FORM SUBMISSION
+  // TERMINAL & INGESTION POLLING LOGIC
   // =====================================
+  function addLogLine(text, color = "#38bdf8") {
+      permanentLogs.push(`<span class="log-time">${getLogTime()}</span><span style="color: ${color}">${text}</span>`);
+      renderTerminal();
+  }
+  function updateScrapeLogs(logsStr) {
+      currentScrapeLogs = logsStr || "";
+      renderTerminal();
+  }
+  function renderTerminal() {
+      const term = document.getElementById('terminal-logs');
+      term.innerHTML = permanentLogs.map(log => `<div class="log-line">${log}</div>`).join('') + `<br><span style="color: #64748b; white-space: pre-wrap;">${currentScrapeLogs}</span>`;
+      term.scrollTop = term.scrollHeight; 
+  }
+
+  function cancelAndRollback() {
+      abortProcess = true;
+      addLogLine("[Fatal] Process cancelled by user. Terminating...", "#ef4444");
+      if (createdBotId) {
+          fetch(`/admin/delete_bot/${createdBotId}`, { method: 'POST' })
+            .then(() => addLogLine("Rollback complete. Bot deleted.", "#ef4444"));
+      }
+      setTimeout(() => { document.getElementById('log-overlay').classList.remove('active'); document.getElementById('final-create-btn').innerText = "Create Chatbot"; document.getElementById('final-create-btn').disabled = false; }, 2000);
+  }
+  function toggleMaximize() { document.getElementById('terminal-container').classList.toggle('maximized'); }
+  function minimizeToBackground() { document.getElementById('log-overlay').classList.remove('active'); document.getElementById('floating-log-btn').style.display = 'block'; }
+  function restoreTerminal() { document.getElementById('log-overlay').classList.add('active'); document.getElementById('floating-log-btn').style.display = 'none'; }
+
   document.getElementById("botPipelineForm").addEventListener("submit", async function (e) {
     e.preventDefault();
-    
-    const btn = document.getElementById('final-create-btn');
-    const nameInput = document.getElementById('bot_name');
-    
-    if (!nameInput.value.trim()) {
-      switchCbTab('tab-ui');
-      nameInput.focus();
-      alert("Please enter a Chatbot Name in the User Interface tab.");
-      return;
-    }
+    const btn = document.getElementById('final-create-btn'), nameInput = document.getElementById('bot_name');
+    if (!nameInput.value.trim()) { switchCbTab('tab-ui'); nameInput.focus(); alert("Please enter a Chatbot Name in the User Interface tab."); return; }
 
-    btn.innerText = "Initializing Engine...";
-    btn.disabled = true;
+    btn.innerText = "Initializing Engine..."; btn.disabled = true;
+
+    const formData = new FormData(this);
+    formData.delete('file');
+    globalAttachedFiles.forEach(item => { formData.append('file', item.fileObj); });
+    formData.delete('raw_text');
+    if (globalTextSnippets.length > 0) {
+      const combinedText = globalTextSnippets.map(s => `Title: ${s.title}\nText:\n${s.text}`).join('\n\n---\n\n');
+      formData.append('raw_text', combinedText);
+    }
+    
+    // We intentionally DO NOT send scrape_url to create_pipeline, we orchestrate it via the polling API
+    formData.delete('scrape_url');
+    formData.delete('use_deep_crawl');
+    formData.delete('max_urls');
+
+    document.getElementById('log-overlay').classList.add('active');
+    document.getElementById('floating-log-btn').style.display = 'none';
+    permanentLogs = []; currentScrapeLogs = ""; abortProcess = false; createdBotId = null;
+    
+    addLogLine("Establishing secure connection to BotFactory...", "#10b981");
 
     try {
-      const formData = new FormData(this);
-      
-      formData.delete('file');
-      globalAttachedFiles.forEach(item => {
-          formData.append('file', item.fileObj);
-      });
-
-      formData.delete('raw_text');
-      if (globalTextSnippets.length > 0) {
-        const combinedText = globalTextSnippets.map(s => `Title: ${s.title}\nText:\n${s.text}`).join('\n\n---\n\n');
-        formData.append('raw_text', combinedText);
-      }
-
-      formData.delete('scrape_url');
-      if (globalLinks.length > 0) {
-        formData.append('links_data', JSON.stringify(globalLinks.map(l => l.url)));
-      }
-      
-      const response = await fetch("{{ url_for('admin_bp.create_pipeline') }}", {
-          method: "POST",
-          body: formData,
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-      });
-
+      const response = await fetch("{{ url_for('admin_bp.create_pipeline') }}", { method: "POST", body: formData, headers: { "X-Requested-With": "XMLHttpRequest" }});
       const data = await response.json();
 
       if (data.success) {
-          window.location.href = "{{ url_for('views_bp.dashboard') }}";
+          createdBotId = data.bot_id;
+          addLogLine(`Bot successfully initialized in database (ID: ${createdBotId}).`, "#10b981");
+          
+          if (globalLinks.length > 0 && !abortProcess) {
+              addLogLine(`Found ${globalLinks.length} root web source(s). Initiating Scrape Workers...`, "#f59e0b");
+              
+              for (let i = 0; i < globalLinks.length; i++) {
+                  if (abortProcess) break;
+                  const link = globalLinks[i];
+                  addLogLine(`\n[Scraper] Starting job for: ${link.url}`);
+                  
+                  const scrapeRes = await fetch("{{ url_for('admin_bp.start_scrape') }}", {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({ url: link.url, use_spider: link.isDeep, max_urls: link.maxPages })
+                  });
+                  const scrapeData = await scrapeRes.json();
+                  
+                  if(scrapeData.job_id) {
+                      await new Promise((resolve) => {
+                          const poll = setInterval(async () => {
+                              if (abortProcess) { clearInterval(poll); resolve(); return; }
+                              const sRes = await fetch(`/admin/api/scrape/status/${scrapeData.job_id}`);
+                              const sData = await sRes.json();
+                              
+                              updateScrapeLogs(sData.logs);
+                              
+                              if(sData.status === 'completed' || sData.status === 'failed') {
+                                  clearInterval(poll);
+                                  updateScrapeLogs("");
+                                  addLogLine(sData.logs, "#e2e8f0");
+                                  if (sData.status === 'failed') addLogLine(`[Error] Job failed: ${sData.error}`, "#ef4444");
+                                  resolve();
+                              }
+                          }, 2000);
+                      });
+                  }
+              }
+          }
+          
+          if (!abortProcess) {
+              addLogLine("\nVectors synchronized. Agent deployed successfully.", "#10b981");
+              addLogLine("Redirecting to Dashboard...", "#10b981");
+              setTimeout(() => { window.location.href = "{{ url_for('views_bp.dashboard') }}"; }, 1500); 
+          }
       } else {
-          alert("Error: " + (data.error || "Unknown error occurred"));
-          btn.innerText = "Create Chatbot";
-          btn.disabled = false;
+          addLogLine(`[Error] ${data.error || "Unknown validation error."}`, "#ef4444");
+          setTimeout(() => { document.getElementById('log-overlay').classList.remove('active'); btn.innerText = "Create Chatbot"; btn.disabled = false; }, 3000);
       }
     } catch (err) {
-      console.error("Submission Error:", err);
-      alert("A technical error occurred. Check the console.");
-      btn.innerText = "Create Chatbot";
-      btn.disabled = false;
+      if(abortProcess) return;
+      console.error(err); addLogLine("[Fatal] Connection to processing core lost.", "#ef4444");
+      setTimeout(() => { document.getElementById('log-overlay').classList.remove('active'); btn.innerText = "Create Chatbot"; btn.disabled = false; }, 3000);
     }
   });
 </script>

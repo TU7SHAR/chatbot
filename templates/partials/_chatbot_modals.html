@@ -1,47 +1,44 @@
+<div id="log-overlay" class="cb-modal-overlay" style="z-index: 10000; align-items: center; justify-content: center;">
+  <div id="terminal-container" class="terminal-container">
+    <div class="terminal-header">
+        <div class="term-dot-group">
+            <div class="term-dot r" onclick="cancelAndRollback()" title="Cancel & Delete"></div>
+            <div class="term-dot y" onclick="toggleMaximize()" title="Maximize/Restore"></div>
+            <div class="term-dot g" onclick="minimizeToBackground()" title="Minimize to Background"></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="color: #94a3b8; font-size: 12px; font-family: monospace;">Pipeline Engine</span>
+        </div>
+    </div>
+    <div class="terminal-body" id="terminal-logs"></div>
+  </div>
+</div>
+
+<div id="floating-log-btn" style="display:none; position:fixed; bottom:20px; left:20px; z-index:9999; background:#1e293b; color:#38bdf8; padding:10px 20px; border-radius:50px; cursor:pointer; font-family:monospace; box-shadow:0 10px 25px rgba(0,0,0,0.5);" onclick="restoreTerminal()">View Logs</div>
+
 <div id="global-modal" class="cb-modal-overlay">
   <div class="cb-modal-container">
     <button type="button" class="cb-modal-close-top" onclick="closeModal()">×</button>
     
     <div id="modal-file" class="modal-inner-wrapper">
       <div class="cb-modal-header">
-        <div>
-          <h2>Files</h2>
-          <p>Upload documents to train your AI. Extract text from PDFs, DOCX, and TXT files.</p>
-        </div>
-        <button type="button" class="btn-learn-more">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          Learn more
-        </button>
+        <div><h2>Files</h2><p>Upload documents to train your AI.</p></div>
       </div>
       <div class="cb-modal-body">
         <div class="cb-box">
-          <div class="cb-box-header">
-            Add files
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
-          </div>
+          <div class="cb-box-header">Add files</div>
           <div class="cb-box-content">
-            <div class="cb-warning-banner">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-              If you are uploading a PDF, make sure you can select/highlight the text.
-            </div>
             <label class="cb-dropzone">
               <span class="upload-icon" style="font-size: 24px; margin-bottom: 8px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span>
               <div style="font-size: 14px; color: #111827; margin-bottom: 4px;">Drag & drop files here, or click to select files</div>
-              <div style="font-size: 12px; color: #6b7280;">Supported file types: pdf, doc, docx, txt</div>
               <input type="file" id="file_input" multiple style="display: none;" onchange="updateCbFileList(event)" />
             </label>
           </div>
         </div>
-
         <div style="margin-top: 40px; display: none;" id="file-sources-container">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">File sources</h3>
-            <div style="position: relative;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position: absolute; left: 10px; top: 10px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" placeholder="Search..." class="dash-input" style="width: 220px; padding: 8px 12px 8px 32px; margin-bottom: 0; min-height: 34px; font-size: 13px; border-radius: 8px;">
-            </div>
           </div>
-          
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 10px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; cursor: pointer;">
               <input type="checkbox" id="selectAllFiles" onchange="toggleSelectAllFiles(this)" style="accent-color: #111827; width: 15px; height: 15px; cursor: pointer;"> Select all
@@ -49,22 +46,15 @@
             <div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 4px;">
               Sort by: 
               <select id="fileSort" onchange="sortTempFiles()" style="font-size: 13px; font-weight: 500; color: #111827; border: none; background: transparent; cursor: pointer; outline: none;">
-                <option value="default">Default</option>
-                <option value="name_asc">Name (A-Z)</option>
-                <option value="name_desc">Name (Z-A)</option>
-                <option value="size_desc">Size (Largest)</option>
-                <option value="size_asc">Size (Smallest)</option>
+                <option value="default">Default</option><option value="name_asc">Name (A-Z)</option><option value="name_desc">Name (Z-A)</option><option value="size_desc">Size (Largest)</option><option value="size_asc">Size (Smallest)</option>
               </select>
             </div>
           </div>
-
           <div style="display: none; margin-bottom: 12px; padding: 10px; background: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2;" id="file-bulk-actions">
              <button type="button" onclick="deleteSelectedFiles()" style="color: #ef4444; background: none; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                Delete Selected
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete Selected
              </button>
           </div>
-
           <div id="file-list-display"></div>
         </div>
       </div>
@@ -75,10 +65,7 @@
 
     <div id="modal-text" class="modal-inner-wrapper">
       <div class="cb-modal-header">
-        <div>
-          <h2>Text snippets</h2>
-          <p>Add plain text snippets to your knowledge base.</p>
-        </div>
+        <div><h2>Text snippets</h2><p>Add plain text snippets to your knowledge base.</p></div>
       </div>
       <div class="cb-modal-body">
         <div class="cb-box">
@@ -103,10 +90,7 @@
 
     <div id="modal-links" class="modal-inner-wrapper">
       <div class="cb-modal-header">
-        <div>
-          <h2>Website Crawl</h2>
-          <p>Extract and learn from multiple live websites or sitemaps.</p>
-        </div>
+        <div><h2>Website Crawl</h2><p>Extract and learn from multiple live websites or sitemaps.</p></div>
       </div>
       <div class="cb-modal-body">
         <div class="cb-box">
@@ -126,20 +110,14 @@
               </div>
             </div>
             <div style="padding: 15px; text-align: right; background: #f9fafb; border-top: 1px solid #e5e7eb;">
-              <button type="button" id="btn-add-link" class="btn-modal-action" style="background: #111827;" onclick="addLinkSnippet()">+ Add Link</button>
+              <button type="button" id="btn-add-link" class="btn-modal-action" style="background: #111827;" onclick="addLinkSnippet()">Add Link</button>
             </div>
           </div>
         </div>
-
         <div style="margin-top: 40px; display: none;" id="link-sources-container">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">Web sources</h3>
-            <div style="position: relative;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position: absolute; left: 10px; top: 10px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="text" placeholder="Search..." class="dash-input" style="width: 220px; padding: 8px 12px 8px 32px; margin-bottom: 0; min-height: 34px; font-size: 13px; border-radius: 8px;">
-            </div>
           </div>
-          
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 10px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; cursor: pointer;">
               <input type="checkbox" id="selectAllLinks" onchange="toggleSelectAllLinks(this)" style="accent-color: #111827; width: 15px; height: 15px; cursor: pointer;"> Select all
@@ -147,22 +125,15 @@
             <div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 4px;">
               Sort by: 
               <select id="linkSort" onchange="sortTempLinks()" style="font-size: 13px; font-weight: 500; color: #111827; border: none; background: transparent; cursor: pointer; outline: none;">
-                <option value="default">Default</option>
-                <option value="url_asc">URL (A-Z)</option>
-                <option value="url_desc">URL (Z-A)</option>
-                <option value="pages_desc">Pages (Most)</option>
-                <option value="pages_asc">Pages (Least)</option>
+                <option value="default">Default</option><option value="url_asc">URL (A-Z)</option><option value="url_desc">URL (Z-A)</option>
               </select>
             </div>
           </div>
-
           <div style="display: none; margin-bottom: 12px; padding: 10px; background: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2;" id="link-bulk-actions">
              <button type="button" onclick="deleteSelectedLinks()" style="color: #ef4444; background: none; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                Delete Selected
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete Selected
              </button>
           </div>
-
           <div id="link-list-display"></div>
         </div>
       </div>
@@ -173,10 +144,7 @@
 
     <div id="modal-qa" class="modal-inner-wrapper">
       <div class="cb-modal-header">
-        <div>
-          <h2>Q&A Pairs</h2>
-          <p>Add specific questions and answers to directly train the agent.</p>
-        </div>
+        <div><h2>Q&A Pairs</h2></div>
       </div>
       <div class="cb-modal-body">
         <div class="cb-box">
