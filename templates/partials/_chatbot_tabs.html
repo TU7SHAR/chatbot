@@ -1,0 +1,193 @@
+<div id="global-modal" class="cb-modal-overlay">
+  <div class="cb-modal-container">
+    <button type="button" class="cb-modal-close-top" onclick="closeModal()">×</button>
+    
+    <div id="modal-file" class="modal-inner-wrapper">
+      <div class="cb-modal-header">
+        <div>
+          <h2>Files</h2>
+          <p>Upload documents to train your AI. Extract text from PDFs, DOCX, and TXT files.</p>
+        </div>
+        <button type="button" class="btn-learn-more">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Learn more
+        </button>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-box">
+          <div class="cb-box-header">
+            Add files
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          </div>
+          <div class="cb-box-content">
+            <div class="cb-warning-banner">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              If you are uploading a PDF, make sure you can select/highlight the text.
+            </div>
+            <label class="cb-dropzone">
+              <span class="upload-icon" style="font-size: 24px; margin-bottom: 8px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span>
+              <div style="font-size: 14px; color: #111827; margin-bottom: 4px;">Drag & drop files here, or click to select files</div>
+              <div style="font-size: 12px; color: #6b7280;">Supported file types: pdf, doc, docx, txt</div>
+              <input type="file" id="file_input" multiple style="display: none;" onchange="updateCbFileList(event)" />
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top: 40px; display: none;" id="file-sources-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">File sources</h3>
+            <div style="position: relative;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position: absolute; left: 10px; top: 10px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" placeholder="Search..." class="dash-input" style="width: 220px; padding: 8px 12px 8px 32px; margin-bottom: 0; min-height: 34px; font-size: 13px; border-radius: 8px;">
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; cursor: pointer;">
+              <input type="checkbox" id="selectAllFiles" onchange="toggleSelectAllFiles(this)" style="accent-color: #111827; width: 15px; height: 15px; cursor: pointer;"> Select all
+            </label>
+            <div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 4px;">
+              Sort by: 
+              <select id="fileSort" onchange="sortTempFiles()" style="font-size: 13px; font-weight: 500; color: #111827; border: none; background: transparent; cursor: pointer; outline: none;">
+                <option value="default">Default</option>
+                <option value="name_asc">Name (A-Z)</option>
+                <option value="name_desc">Name (Z-A)</option>
+                <option value="size_desc">Size (Largest)</option>
+                <option value="size_asc">Size (Smallest)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: none; margin-bottom: 12px; padding: 10px; background: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2;" id="file-bulk-actions">
+             <button type="button" onclick="deleteSelectedFiles()" style="color: #ef4444; background: none; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Delete Selected
+             </button>
+          </div>
+
+          <div id="file-list-display"></div>
+        </div>
+      </div>
+      <div class="cb-modal-footer">
+        <button type="button" class="btn-modal-action active" onclick="saveSource('file')">Confirm Files</button>
+      </div>
+    </div>
+
+    <div id="modal-text" class="modal-inner-wrapper">
+      <div class="cb-modal-header">
+        <div>
+          <h2>Text snippets</h2>
+          <p>Add plain text snippets to your knowledge base.</p>
+        </div>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-box">
+          <div class="cb-box-header">Add text snippet</div>
+          <div class="cb-box-content" style="padding: 0;">
+            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+              <label style="display: block; font-size: 12px; color: #4b5563; margin-bottom: 8px;">Title</label>
+              <input type="text" id="snippet_title" class="dash-input" style="width: 100%; margin-bottom: 0;" placeholder="Ex: Refund requests">
+            </div>
+            <textarea id="snippet_text" class="dash-input" rows="6" style="width: 100%; border: none; border-radius: 0; margin-bottom: 0; padding: 20px; border-bottom: 1px solid #e5e7eb;" placeholder="Paste your raw text here..."></textarea>
+            <div style="padding: 15px; text-align: right; background: #f9fafb;">
+              <button type="button" id="btn-add-snippet" class="btn-modal-action" style="background: #111827;" onclick="addTextSnippet()">+ Add Snippet</button>
+            </div>
+          </div>
+        </div>
+        <div id="text-list-display" style="margin-top: 15px;"></div>
+      </div>
+      <div class="cb-modal-footer">
+        <button type="button" class="btn-modal-action active" onclick="saveSource('text')">Confirm Snippets</button>
+      </div>
+    </div>
+
+    <div id="modal-links" class="modal-inner-wrapper">
+      <div class="cb-modal-header">
+        <div>
+          <h2>Website Crawl</h2>
+          <p>Extract and learn from multiple live websites or sitemaps.</p>
+        </div>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-box">
+          <div class="cb-box-header">Add Link</div>
+          <div class="cb-box-content" style="padding: 0;">
+            <div style="padding: 20px;">
+              <input type="url" id="scrape_url" class="dash-input" style="width: 100%; margin-bottom: 20px;" placeholder="https://www.example.com" />
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                  <div style="display: flex; align-items: center; gap: 10px; background: #f9fafb; padding: 12px 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <input type="checkbox" id="use_deep_crawl" style="width: 16px; height: 16px; cursor: pointer;" />
+                    <label for="use_deep_crawl" style="font-size: 13px; font-weight: 500; color: #111827; cursor: pointer; margin: 0;">Deep Crawl</label>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; background: #f9fafb; padding: 12px 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <label for="max_urls" style="font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin: 0;">Max Pages:</label>
+                    <input type="number" id="max_urls" value="20" class="dash-input" style="width: 70px; padding: 4px; margin-bottom: 0; text-align: center; background: #fff;" />
+                  </div>
+              </div>
+            </div>
+            <div style="padding: 15px; text-align: right; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+              <button type="button" id="btn-add-link" class="btn-modal-action" style="background: #111827;" onclick="addLinkSnippet()">Add Links</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 40px; display: none;" id="link-sources-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">Web sources</h3>
+            <div style="position: relative;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position: absolute; left: 10px; top: 10px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" placeholder="Search..." class="dash-input" style="width: 220px; padding: 8px 12px 8px 32px; margin-bottom: 0; min-height: 34px; font-size: 13px; border-radius: 8px;">
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; cursor: pointer;">
+              <input type="checkbox" id="selectAllLinks" onchange="toggleSelectAllLinks(this)" style="accent-color: #111827; width: 15px; height: 15px; cursor: pointer;"> Select all
+            </label>
+            <div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 4px;">
+              Sort by: 
+              <select id="linkSort" onchange="sortTempLinks()" style="font-size: 13px; font-weight: 500; color: #111827; border: none; background: transparent; cursor: pointer; outline: none;">
+                <option value="default">Default</option>
+                <option value="url_asc">URL (A-Z)</option>
+                <option value="url_desc">URL (Z-A)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: none; margin-bottom: 12px; padding: 10px; background: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2;" id="link-bulk-actions">
+             <button type="button" onclick="deleteSelectedLinks()" style="color: #ef4444; background: none; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Delete Selected
+             </button>
+          </div>
+
+          <div id="link-list-display"></div>
+        </div>
+      </div>
+      <div class="cb-modal-footer">
+        <button type="button" class="btn-modal-action active" onclick="saveSource('links')">Confirm Links</button>
+      </div>
+    </div>
+
+    <div id="modal-qa" class="modal-inner-wrapper">
+      <div class="cb-modal-header">
+        <div>
+          <h2>Q&A Pairs</h2>
+          <p>Add specific questions and answers to directly train the agent.</p>
+        </div>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-box">
+          <div class="cb-box-header">Add Q&A</div>
+          <div class="cb-box-content">
+             <textarea name="qa_text" id="qa_input" class="dash-input" rows="6" style="width: 100%; resize: vertical; margin-bottom: 0;" placeholder="Q: What is your refund policy?&#10;A: We offer a 30-day money-back guarantee."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="cb-modal-footer">
+        <button type="button" class="btn-modal-action active" onclick="saveSource('qa')">Save Q&A</button>
+      </div>
+    </div>
+
+  </div>
+</div>
