@@ -1,12 +1,15 @@
 import os
 import uuid
+import json
+import threading
+import base64
 from flask import request, redirect, url_for, flash, session, render_template, jsonify, current_app
+from werkzeug.utils import secure_filename 
+
 from models.models import db, Bot, Document, BotUI, ScrapeJob
 from bot.cloud import upload_to_gemini, delete_from_gemini, create_dynamic_store
 from routes.auth.decorators import admin_required
-from werkzeug.utils import secure_filename 
 from . import admin_bp
-import threading 
 from .scrape_managment import async_scrape_task
 
 @admin_bp.route('/create_pipeline', methods=['GET', 'POST'])
@@ -48,23 +51,19 @@ def create_pipeline():
     db.session.flush()
 
     avatar_file = request.files.get('bot_avatar')
-    avatar_path = None
+    avatar_base64_str = None
     
     if avatar_file and avatar_file.filename != '':
-        avatar_dir = os.path.join(current_app.root_path, 'static', 'avatars')
-        os.makedirs(avatar_dir, exist_ok=True)
-        
-        safe_avatar_name = f"avatar_{new_bot.id}_{secure_filename(avatar_file.filename)}"
-        save_path = os.path.join(avatar_dir, safe_avatar_name)
-        avatar_file.save(save_path)
-        avatar_path = f'/static/avatars/{safe_avatar_name}'
+        img_bytes = avatar_file.read()
+        b64_encoded = base64.b64encode(img_bytes).decode('utf-8')
+        avatar_base64_str = f"data:{avatar_file.mimetype};base64,{b64_encoded}"
 
     new_ui = BotUI(
         bot_id=new_bot.id,
         theme_color=theme_color,
         header_color=header_color,
         theme_mode=theme_mode,
-        avatar_path=avatar_path,
+        avatar_base64=avatar_base64_str,
         glass_opacity=glass_opacity, 
         glass_blur=glass_blur
     )
@@ -90,22 +89,31 @@ def create_pipeline():
             except Exception as e:
                 pipeline_logs.append(f"[Error] Gemini Upload Error for {safe_name}: {e}")
 
-    raw_text = request.form.get('raw_text')
-    if raw_text and raw_text.strip():
-        txt_filename = f"manual_knowledge_{uuid.uuid4().hex[:6]}.txt"
-        txt_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], txt_filename)
-        
-        with open(txt_filepath, 'w', encoding='utf-8') as f:
-            f.write(raw_text)
+    text_snippets_data = request.form.get('text_snippets_data')
+    if text_snippets_data:
+        snippets = json.loads(text_snippets_data)
+        for snippet in snippets:
+            title = snippet.get('title', 'Untitled')
+            content = snippet.get('text', '')
+            if content.strip():
+                safe_title = "".join(x for x in title if x.isalnum() or x in " _-").strip()
+                if not safe_title:
+                    safe_title = "TextSnippet"
+                
+                txt_filename = f"{safe_title}_{uuid.uuid4().hex[:6]}.txt"
+                txt_filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], txt_filename)
+                
+                with open(txt_filepath, 'w', encoding='utf-8') as f:
+                    f.write(f"Title: {title}\n\n{content}")
 
-        new_doc = Document(bot_id=new_bot.id, filename=txt_filename)
-        db.session.add(new_doc)
-        
-        try:
-            upload_to_gemini(txt_filepath, new_bot.store_id)
-            pipeline_logs.append(f"[Text] Vectorized snippet")
-        except Exception as e:
-            pipeline_logs.append(f"[Error] Gemini Text Upload Error: {e}")
+                new_doc = Document(bot_id=new_bot.id, filename=txt_filename)
+                db.session.add(new_doc)
+                
+                try:
+                    upload_to_gemini(txt_filepath, new_bot.store_id)
+                    pipeline_logs.append(f"[Text] Vectorized snippet: {safe_title}")
+                except Exception as e:
+                    pipeline_logs.append(f"[Error] Gemini Text Upload Error for {title}: {e}")
 
     qa_text = request.form.get('qa_text')
     if qa_text and qa_text.strip():
@@ -145,6 +153,8 @@ def create_pipeline():
     session['theme_color'] = new_ui.theme_color
     session['header_color'] = new_ui.header_color
     session['theme_mode'] = new_ui.theme_mode
+    session['glass_opacity'] = new_ui.glass_opacity
+    session['glass_blur'] = new_ui.glass_blur
 
     return jsonify({"success": True, "bot_id": new_bot.id, "logs": pipeline_logs})
 
@@ -247,13 +257,9 @@ def update_bot(bot_id):
 
     avatar_file = request.files.get('bot_avatar')
     if avatar_file and avatar_file.filename != '':
-        avatar_dir = os.path.join(current_app.root_path, 'static', 'avatars')
-        os.makedirs(avatar_dir, exist_ok=True)
-        
-        safe_avatar_name = f"avatar_{bot.id}_{secure_filename(avatar_file.filename)}"
-        save_path = os.path.join(avatar_dir, safe_avatar_name)
-        avatar_file.save(save_path)
-        bot.ui_settings.avatar_path = f'/static/avatars/{safe_avatar_name}'
+        img_bytes = avatar_file.read()
+        b64_encoded = base64.b64encode(img_bytes).decode('utf-8')
+        bot.ui_settings.avatar_base64 = f"data:{avatar_file.mimetype};base64,{b64_encoded}"
 
     db.session.commit()
     
@@ -262,6 +268,8 @@ def update_bot(bot_id):
         session['theme_color'] = bot.ui_settings.theme_color
         session['header_color'] = bot.ui_settings.header_color
         session['theme_mode'] = bot.ui_settings.theme_mode
+        session['glass_opacity'] = bot.ui_settings.glass_opacity
+        session['glass_blur'] = bot.ui_settings.glass_blur
 
     flash("Bot configurations updated successfully!", "success")
     return redirect(url_for('admin_bp.edit_bot', bot_id=bot.id))

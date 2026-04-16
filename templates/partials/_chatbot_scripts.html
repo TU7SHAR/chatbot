@@ -6,6 +6,8 @@
   let createdBotId = null;
   let permanentLogs = [];
   let currentScrapeLogs = "";
+  let isPromptManuallyEdited = false;
+
 
   function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes'; const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -109,47 +111,38 @@
       display.appendChild(div);
     });
   }
-  async function addLinkSnippet() {
-    const urlEl = document.getElementById('scrape_url'), deepCrawlEl = document.getElementById('use_deep_crawl'), maxUrlsEl = document.getElementById('max_urls'), btn = document.getElementById('btn-add-link');
+  function addLinkSnippet() {
+    const urlEl = document.getElementById('scrape_url');
+    const deepCrawlEl = document.getElementById('use_deep_crawl');
+    const maxUrlsEl = document.getElementById('max_urls');
+    
     let url = urlEl.value.trim();
     if (!url) { alert("Please enter a valid URL."); return; }
     if (!url.startsWith('http://') && !url.startsWith('https://')) { url = 'https://' + url; }
-    const isDeep = deepCrawlEl.checked, maxPages = parseInt(maxUrlsEl.value) || 20;
-    btn.innerText = "Extracting..."; btn.disabled = true;
-    let extractedUrls = [];
-    try {
-        if (isDeep || url.endsWith('.xml')) {
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            const response = await fetch(proxyUrl); 
-            if (!response.ok) throw new Error("Proxy error");
-            const content = await response.text(); 
-            const linksSet = new Set();
-            if (url.endsWith('.xml') || content.includes('<urlset')) {
-                const xmlDoc = new DOMParser().parseFromString(content, "text/xml"); const locs = xmlDoc.getElementsByTagName("loc");
-                for (let i = 0; i < locs.length; i++) { if(locs[i].textContent) linksSet.add(locs[i].textContent.trim()); }
-            } else if (isDeep) {
-                linksSet.add(url);
-                const doc = new DOMParser().parseFromString(content, "text/html"); const anchors = doc.querySelectorAll('a[href]');
-                const baseUrlObj = new URL(url); const baseHost = baseUrlObj.hostname.replace(/^www\./, '');
-                anchors.forEach(a => {
-                    try {
-                        let href = a.getAttribute('href');
-                        if (href && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('#')) {
-                            const resolvedUrl = new URL(href, baseUrlObj.origin); resolvedUrl.hash = ''; 
-                            if (resolvedUrl.hostname.replace(/^www\./, '') === baseHost) linksSet.add(resolvedUrl.href);
-                        }
-                    } catch(e) {}
-                });
-            }
-            extractedUrls = Array.from(linksSet).slice(0, maxPages);
-        } else { extractedUrls.push(url); }
-    } catch (error) { 
-        console.warn("Proxy blocked. Falling back to single URL.", error); 
-        extractedUrls = [url]; 
+
+    const isDeep = deepCrawlEl.checked;
+    const maxPages = parseInt(maxUrlsEl.value) || 20;
+
+    const newLink = { 
+        url: url, 
+        addedAt: Date.now() + Math.random(), 
+        isNew: true, 
+        isDeep: isDeep, 
+        maxPages: maxPages 
+    };
+
+    if (editingLinkIndex >= 0) { 
+        tempLinks[editingLinkIndex] = newLink; 
+        editingLinkIndex = -1; 
+    } else { 
+        tempLinks.push(newLink); 
     }
-    extractedUrls.forEach(extractedUrl => { if (!tempLinks.find(l => l.url === extractedUrl)) { tempLinks.push({ url: extractedUrl, addedAt: Date.now() + Math.random(), isNew: true, isDeep: isDeep }); } });
-    if (editingLinkIndex >= 0) { tempLinks.splice(editingLinkIndex, 1); editingLinkIndex = -1; }
-    urlEl.value = ''; deepCrawlEl.checked = false; maxUrlsEl.value = '20'; btn.innerText = "Add Links"; btn.disabled = false; sortTempLinks(); 
+    
+    urlEl.value = ''; 
+    deepCrawlEl.checked = false; 
+    maxUrlsEl.value = '20'; 
+    document.getElementById('btn-add-link').innerText = "Add Links"; 
+    sortTempLinks(); 
   }
   function sortTempLinks() {
     const sortVal = document.getElementById('linkSort').value;
@@ -180,7 +173,7 @@
     renderLinkUI(); updateLinkBulkActionsVisibility();
   }
   function editLinkSnippet(index) {
-    const link = tempLinks[index]; document.getElementById('scrape_url').value = link.url; document.getElementById('use_deep_crawl').checked = true; document.getElementById('max_urls').value = '20';
+    const link = tempLinks[index]; document.getElementById('scrape_url').value = link.url; document.getElementById('use_deep_crawl').checked = link.isDeep; document.getElementById('max_urls').value = link.maxPages;
     editingLinkIndex = index; document.getElementById('btn-add-link').innerText = "Update & Recrawl Link"; document.getElementById('scrape_url').focus();
   }
   function renderLinkUI() {
@@ -231,24 +224,61 @@
     if (hasData && type === 'qa') document.getElementById('status-qa').innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Added`;
     updateDashboardBadges(); closeModal();
   }
+
   function updateLivePreview() {
-    const name = document.getElementById('bot_name').value || "Y Combinator", color = document.getElementById('theme_color').value, opacity = document.getElementById('glass_opacity').value, blur = document.getElementById('glass_blur').value, theme = document.getElementById('theme_mode').value;
-    document.getElementById('preview-name').innerText = name; document.getElementById('hex-display').innerText = color.toUpperCase(); document.getElementById('val-opacity').innerText = opacity + "%"; document.getElementById('val-blur').innerText = blur + "px";
-    document.getElementById('preview-bubble').style.backgroundColor = color; document.getElementById('preview-avatar').style.backgroundColor = color; document.getElementById('preview-avatar-setting').style.backgroundColor = color;
-    const widget = document.getElementById('mock-widget'), alpha = opacity / 100, bgColor = (theme === 'dark') ? `rgba(17, 24, 39, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
-    widget.style.backgroundColor = bgColor; widget.style.backdropFilter = `blur(${blur}px)`; widget.style.webkitBackdropFilter = `blur(${blur}px)`;
+    const name = document.getElementById('bot_name').value || "Y Combinator", 
+          color = document.getElementById('theme_color').value, 
+          opacity = document.getElementById('glass_opacity').value, 
+          blur = document.getElementById('glass_blur').value, 
+          theme = document.getElementById('theme_mode').value;
+
+    document.getElementById('preview-name').innerText = name; 
+    document.getElementById('hex-display').innerText = color.toUpperCase(); 
+    document.getElementById('val-opacity').innerText = opacity + "%"; 
+    document.getElementById('val-blur').innerText = blur + "px";
+    
+    document.getElementById('preview-bubble').style.backgroundColor = color; 
+    
+    const avatarPreview = document.getElementById('preview-avatar');
+    const avatarSetting = document.getElementById('preview-avatar-setting');
+    
+    if (!avatarPreview.style.backgroundImage) {
+        avatarPreview.style.backgroundColor = color; 
+        avatarPreview.innerText = name.charAt(0).toUpperCase();
+    }
+    if (!avatarSetting.style.backgroundImage) {
+        avatarSetting.style.backgroundColor = color;
+        avatarSetting.innerText = name.charAt(0).toUpperCase();
+    }
+
+    const widget = document.getElementById('mock-widget'), 
+          alpha = opacity / 100, 
+          bgColor = (theme === 'dark') ? `rgba(17, 24, 39, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
+          
+    widget.style.backgroundColor = bgColor; 
+    widget.style.backdropFilter = `blur(${blur}px)`; 
+    widget.style.webkitBackdropFilter = `blur(${blur}px)`;
   }
+
   function previewAvatar(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const imgUrl = e.target.result, avatars = [document.getElementById('preview-avatar'), document.getElementById('preview-avatar-setting')];
-            avatars.forEach(av => { av.style.backgroundImage = `url(${imgUrl})`; av.style.backgroundSize = 'cover'; av.style.backgroundPosition = 'center'; av.innerText = ''; });
+            const imgUrl = e.target.result;
+            const avatars = [document.getElementById('preview-avatar'), document.getElementById('preview-avatar-setting')];
+            avatars.forEach(av => { 
+                av.style.backgroundColor = 'transparent'; 
+                av.style.backgroundImage = `url(${imgUrl})`; 
+                av.style.backgroundSize = 'cover'; 
+                av.style.backgroundPosition = 'center'; 
+                av.innerText = ''; 
+            });
         }
         reader.readAsDataURL(file);
     }
   }
+
   function setPreviewTheme(theme) {
     const lightBtn = document.getElementById('btn-theme-light'), darkBtn = document.getElementById('btn-theme-dark');
     const widget = document.getElementById('mock-widget'), header = document.getElementById('mock-header'), body = document.getElementById('mock-body'), footer = document.getElementById('mock-footer'), bubbleIn = document.getElementById('mock-bubble-in'), inputField = document.getElementById('mock-input-field');
@@ -261,13 +291,29 @@
         widget.style.background = '#fff'; widget.style.borderColor = 'rgba(0,0,0,0.05)'; header.style.borderBottomColor = 'rgba(0,0,0,0.05)'; document.getElementById('preview-name').style.color = '#111827'; body.style.background = '#f9fafb'; footer.style.borderTopColor = 'rgba(0,0,0,0.05)'; bubbleIn.style.background = '#e5e7eb'; bubbleIn.style.color = '#111827'; if(inputField) { inputField.style.background = '#f3f4f6'; inputField.style.color = '#9ca3af'; }
     }
   }
+  
+
   function generateCbPrompt() {
-    const typeEl = document.getElementById("bot_type"), nameEl = document.getElementById("bot_name"), promptEl = document.getElementById("system_prompt");
+    if (isPromptManuallyEdited) return; // Do not overwrite if the user typed a custom prompt
+    
+    const typeEl = document.getElementById("bot_type"), 
+          nameEl = document.getElementById("bot_name"), 
+          promptEl = document.getElementById("system_prompt");
+          
     if (!typeEl || !promptEl) return;
-    const type = typeEl.value, name = nameEl ? (nameEl.value || "the Assistant") : "the Assistant";
-    const prompts = { general: `You are ${name}, a helpful AI assistant. Use the provided Knowledge Base to answer questions concisely.`, sales: `You are ${name}, a persuasive sales rep. Use the Knowledge Base to highlight product benefits and guide users.`, support: `You are ${name}, a helpful support agent. Use the Knowledge Base to solve technical issues step-by-step.`, };
+    
+    const type = typeEl.value;
+    const name = nameEl && nameEl.value.trim() ? nameEl.value.trim() : "the Assistant";
+    
+    const prompts = { 
+        general: `You are ${name}, a helpful AI assistant. Use the provided Knowledge Base to answer questions concisely.`, 
+        sales: `You are ${name}, a persuasive sales rep. Use the Knowledge Base to highlight product benefits and guide users.`, 
+        support: `You are ${name}, a helpful support agent. Use the Knowledge Base to solve technical issues step-by-step.` 
+    };
+    
     promptEl.value = prompts[type] || prompts.general;
   }
+
   function switchCbTab(tabId) {
     document.querySelectorAll('.cb-tab').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.cb-pane').forEach(pane => pane.classList.remove('active'));
@@ -275,7 +321,13 @@
     if(targetBtn) targetBtn.classList.add('active');
     document.getElementById(tabId).classList.add('active');
   }
-  function syncUseCase() { const selectedMode = document.getElementById('quick_usecase').value; document.getElementById('bot_type').value = selectedMode; generateCbPrompt(); }
+
+  function syncUseCase() { 
+      const selectedMode = document.getElementById('quick_usecase').value; 
+      document.getElementById('bot_type').value = selectedMode; 
+      generateCbPrompt(); 
+  }
+
   function handleQuickContinue() {
     const quickUrl = document.getElementById('quick_url').value.trim();
     if (quickUrl) {
@@ -285,11 +337,43 @@
     }
     switchCbTab('tab-data');
   }
+
   function validateAndNext() {
     const nameInput = document.getElementById('bot_name');
     if (!nameInput.value.trim()) { alert("Please enter an Agent Name before continuing."); nameInput.focus(); return; }
     switchCbTab('tab-settings');
   }
+
+  document.addEventListener("DOMContentLoaded", function() { 
+      syncUseCase(); 
+      updateLivePreview(); 
+
+      // 1. Detect if the user manually edits the system prompt box
+      const promptEl = document.getElementById("system_prompt");
+      if (promptEl) {
+          promptEl.addEventListener("input", function() {
+              isPromptManuallyEdited = true;
+          });
+      }
+
+      // 2. Live update the System Prompt & UI Preview when typing the Bot Name
+      const nameEl = document.getElementById("bot_name");
+      if (nameEl) {
+          nameEl.addEventListener("input", function() {
+              generateCbPrompt();
+              updateLivePreview();
+          });
+      }
+
+      // 3. Live update the System Prompt if the user changes the Bot Type (Sales/Support/General)
+      const typeEl = document.getElementById("bot_type");
+      if (typeEl) {
+          typeEl.addEventListener("change", function() {
+              generateCbPrompt();
+          });
+      }
+  });
+  
   document.addEventListener("DOMContentLoaded", function() { syncUseCase(); updateLivePreview(); });
 
   function addLogLine(text, color = "#38bdf8") {

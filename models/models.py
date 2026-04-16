@@ -42,8 +42,7 @@ class BotUI(db.Model):
     theme_color = db.Column(db.String(20), default='#E8722A')
     header_color = db.Column(db.String(20), default='#FFFFFF')
     theme_mode = db.Column(db.String(10), default='light')
-    avatar_path = db.Column(db.String(255), nullable=True)
-    
+    avatar_base64 = db.Column(db.Text, nullable=True)    
     glass_opacity = db.Column(db.Integer, default=35)
     glass_blur = db.Column(db.Integer, default=25)
 
