@@ -291,19 +291,35 @@
     switchCbTab('tab-settings');
   }
   document.addEventListener("DOMContentLoaded", function() { syncUseCase(); updateLivePreview(); });
+
   function addLogLine(text, color = "#38bdf8") {
-      permanentLogs.push(`<span class="log-time">${getLogTime()}</span><span style="color: ${color}">${text}</span>`);
-      renderTerminal();
-  }
-  function updateScrapeLogs(logsStr) {
-      currentScrapeLogs = logsStr || "";
-      renderTerminal();
-  }
-  function renderTerminal() {
       const term = document.getElementById('terminal-logs');
-      term.innerHTML = permanentLogs.map(log => `<div class="log-line">${log}</div>`).join('') + `<br><span style="color: #64748b; white-space: pre-wrap;">${currentScrapeLogs}</span>`;
-      term.scrollTop = term.scrollHeight; 
+      let permLogs = document.getElementById('perm-logs');
+      let liveLogs = document.getElementById('live-logs');
+      if (!permLogs) {
+          term.innerHTML = '<div id="perm-logs"></div><div id="live-logs" style="color: #64748b; white-space: pre-wrap; margin-top: 10px;"></div>';
+          permLogs = document.getElementById('perm-logs');
+      }
+      const div = document.createElement('div');
+      div.style.marginBottom = '8px';
+      div.style.opacity = '1';
+      div.innerHTML = `<span style="color: #64748b; margin-right: 10px;">${getLogTime()}</span><span style="color: ${color}">${text}</span>`;
+      permLogs.appendChild(div);
+      term.scrollTop = term.scrollHeight;
   }
+
+  function updateScrapeLogs(logsStr) {
+      const liveLogs = document.getElementById('live-logs');
+      if (liveLogs) {
+          liveLogs.innerText = logsStr || "";
+      }
+      const term = document.getElementById('terminal-logs');
+      term.scrollTop = term.scrollHeight;
+  }
+
+  function renderTerminal() {
+  }
+
   function cancelAndRollback() {
       abortProcess = true;
       addLogLine("[Fatal] Process cancelled by user. Terminating...", "#ef4444");
@@ -335,6 +351,8 @@
     document.getElementById('log-overlay').classList.add('active');
     document.getElementById('floating-log-btn').style.display = 'none';
     permanentLogs = []; currentScrapeLogs = ""; abortProcess = false; createdBotId = null;
+    document.getElementById('terminal-logs').innerHTML = '';
+    
     addLogLine("Establishing secure connection to BotFactory...", "#10b981");
     addLogLine("Initializing Bot Agent...", "#38bdf8");
     let fakeLogQueue = [
