@@ -14,7 +14,6 @@
   function getLogTime() {
     const d = new Date(); return `[${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}]`;
   }
-
   function updateCbFileList(event) {
     const newItems = Array.from(event.target.files).map(f => ({ fileObj: f, addedAt: Date.now() + Math.random(), isNew: true }));
     tempAttachedFiles = tempAttachedFiles.concat(newItems);
@@ -75,7 +74,6 @@
     });
     document.getElementById('selectAllFiles').checked = tempAttachedFiles.length > 0 && selectedFileIndices.size === tempAttachedFiles.length;
   }
-
   function addTextSnippet() {
     const titleEl = document.getElementById('snippet_title'), textEl = document.getElementById('snippet_text');
     const title = titleEl.value.trim() || 'Untitled Snippet', text = textEl.value.trim();
@@ -99,8 +97,8 @@
       let div = document.createElement('div'); div.className = 'chatbase-file-row'; div.style.width = '100%';
       div.innerHTML = `
         <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
-          <span style="font-weight: 500; font-size: 14px; color: #111827; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${snippet.title}</span>
-          <span style="font-size: 12px; color: #6b7280; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${snippet.text}</span>
+          <span style="font-weight: 500; font-size: 14px; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${snippet.title}</span>
+          <span style="font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${snippet.text}</span>
         </div>
         <div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
           <button type="button" onclick="editTextSnippet(${index})" style="background:none; border:none; color:var(--orange); cursor:pointer; font-size:12px; font-weight:600;">Edit</button>
@@ -111,17 +109,14 @@
       display.appendChild(div);
     });
   }
-
   async function addLinkSnippet() {
     const urlEl = document.getElementById('scrape_url'), deepCrawlEl = document.getElementById('use_deep_crawl'), maxUrlsEl = document.getElementById('max_urls'), btn = document.getElementById('btn-add-link');
     let url = urlEl.value.trim();
     if (!url) { alert("Please enter a valid URL."); return; }
     if (!url.startsWith('http://') && !url.startsWith('https://')) { url = 'https://' + url; }
-
     const isDeep = deepCrawlEl.checked, maxPages = parseInt(maxUrlsEl.value) || 20;
     btn.innerText = "Extracting..."; btn.disabled = true;
     let extractedUrls = [];
-
     try {
         if (isDeep || url.endsWith('.xml')) {
             const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
@@ -129,7 +124,6 @@
             if (!response.ok) throw new Error("Proxy error");
             const content = await response.text(); 
             const linksSet = new Set();
-            
             if (url.endsWith('.xml') || content.includes('<urlset')) {
                 const xmlDoc = new DOMParser().parseFromString(content, "text/xml"); const locs = xmlDoc.getElementsByTagName("loc");
                 for (let i = 0; i < locs.length; i++) { if(locs[i].textContent) linksSet.add(locs[i].textContent.trim()); }
@@ -153,10 +147,8 @@
         console.warn("Proxy blocked. Falling back to single URL.", error); 
         extractedUrls = [url]; 
     }
-
     extractedUrls.forEach(extractedUrl => { if (!tempLinks.find(l => l.url === extractedUrl)) { tempLinks.push({ url: extractedUrl, addedAt: Date.now() + Math.random(), isNew: true, isDeep: isDeep }); } });
     if (editingLinkIndex >= 0) { tempLinks.splice(editingLinkIndex, 1); editingLinkIndex = -1; }
-    
     urlEl.value = ''; deepCrawlEl.checked = false; maxUrlsEl.value = '20'; btn.innerText = "Add Links"; btn.disabled = false; sortTempLinks(); 
   }
   function sortTempLinks() {
@@ -216,7 +208,6 @@
     });
     document.getElementById('selectAllLinks').checked = tempLinks.length > 0 && selectedLinkIndices.size === tempLinks.length;
   }
-
   function openModal(modalId) {
     document.getElementById('global-modal').classList.add('active');
     document.querySelectorAll('.modal-inner-wrapper').forEach(el => el.style.display = 'none');
@@ -226,13 +217,11 @@
     document.getElementById(modalId).style.display = 'flex';
   }
   function closeModal() { document.getElementById('global-modal').classList.remove('active'); }
-
   function updateDashboardBadges() {
     document.getElementById('status-file').innerHTML = globalAttachedFiles.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalAttachedFiles.length} Added` : '';
     document.getElementById('status-text').innerHTML = globalTextSnippets.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalTextSnippets.length} Added` : '';
     document.getElementById('status-links').innerHTML = globalLinks.length > 0 ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${globalLinks.length} Added` : '';
   }
-
   function saveSource(type) {
     let hasData = false;
     if (type === 'file') { globalAttachedFiles = tempAttachedFiles.map(item => ({...item, isNew: false})); if (globalAttachedFiles.length > 0) hasData = true; } 
@@ -242,7 +231,6 @@
     if (hasData && type === 'qa') document.getElementById('status-qa').innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px; margin-bottom: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg> Added`;
     updateDashboardBadges(); closeModal();
   }
-
   function updateLivePreview() {
     const name = document.getElementById('bot_name').value || "Y Combinator", color = document.getElementById('theme_color').value, opacity = document.getElementById('glass_opacity').value, blur = document.getElementById('glass_blur').value, theme = document.getElementById('theme_mode').value;
     document.getElementById('preview-name').innerText = name; document.getElementById('hex-display').innerText = color.toUpperCase(); document.getElementById('val-opacity').innerText = opacity + "%"; document.getElementById('val-blur').innerText = blur + "px";
@@ -250,7 +238,6 @@
     const widget = document.getElementById('mock-widget'), alpha = opacity / 100, bgColor = (theme === 'dark') ? `rgba(17, 24, 39, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
     widget.style.backgroundColor = bgColor; widget.style.backdropFilter = `blur(${blur}px)`; widget.style.webkitBackdropFilter = `blur(${blur}px)`;
   }
-
   function previewAvatar(event) {
     const file = event.target.files[0];
     if (file) {
@@ -262,7 +249,6 @@
         reader.readAsDataURL(file);
     }
   }
-
   function setPreviewTheme(theme) {
     const lightBtn = document.getElementById('btn-theme-light'), darkBtn = document.getElementById('btn-theme-dark');
     const widget = document.getElementById('mock-widget'), header = document.getElementById('mock-header'), body = document.getElementById('mock-body'), footer = document.getElementById('mock-footer'), bubbleIn = document.getElementById('mock-bubble-in'), inputField = document.getElementById('mock-input-field');
@@ -275,7 +261,6 @@
         widget.style.background = '#fff'; widget.style.borderColor = 'rgba(0,0,0,0.05)'; header.style.borderBottomColor = 'rgba(0,0,0,0.05)'; document.getElementById('preview-name').style.color = '#111827'; body.style.background = '#f9fafb'; footer.style.borderTopColor = 'rgba(0,0,0,0.05)'; bubbleIn.style.background = '#e5e7eb'; bubbleIn.style.color = '#111827'; if(inputField) { inputField.style.background = '#f3f4f6'; inputField.style.color = '#9ca3af'; }
     }
   }
-
   function generateCbPrompt() {
     const typeEl = document.getElementById("bot_type"), nameEl = document.getElementById("bot_name"), promptEl = document.getElementById("system_prompt");
     if (!typeEl || !promptEl) return;
@@ -283,7 +268,6 @@
     const prompts = { general: `You are ${name}, a helpful AI assistant. Use the provided Knowledge Base to answer questions concisely.`, sales: `You are ${name}, a persuasive sales rep. Use the Knowledge Base to highlight product benefits and guide users.`, support: `You are ${name}, a helpful support agent. Use the Knowledge Base to solve technical issues step-by-step.`, };
     promptEl.value = prompts[type] || prompts.general;
   }
-
   function switchCbTab(tabId) {
     document.querySelectorAll('.cb-tab').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.cb-pane').forEach(pane => pane.classList.remove('active'));
@@ -291,9 +275,7 @@
     if(targetBtn) targetBtn.classList.add('active');
     document.getElementById(tabId).classList.add('active');
   }
-
   function syncUseCase() { const selectedMode = document.getElementById('quick_usecase').value; document.getElementById('bot_type').value = selectedMode; generateCbPrompt(); }
-
   function handleQuickContinue() {
     const quickUrl = document.getElementById('quick_url').value.trim();
     if (quickUrl) {
@@ -303,15 +285,12 @@
     }
     switchCbTab('tab-data');
   }
-
   function validateAndNext() {
     const nameInput = document.getElementById('bot_name');
     if (!nameInput.value.trim()) { alert("Please enter an Agent Name before continuing."); nameInput.focus(); return; }
     switchCbTab('tab-settings');
   }
-
   document.addEventListener("DOMContentLoaded", function() { syncUseCase(); updateLivePreview(); });
-
   function addLogLine(text, color = "#38bdf8") {
       permanentLogs.push(`<span class="log-time">${getLogTime()}</span><span style="color: ${color}">${text}</span>`);
       renderTerminal();
@@ -325,7 +304,6 @@
       term.innerHTML = permanentLogs.map(log => `<div class="log-line">${log}</div>`).join('') + `<br><span style="color: #64748b; white-space: pre-wrap;">${currentScrapeLogs}</span>`;
       term.scrollTop = term.scrollHeight; 
   }
-
   function cancelAndRollback() {
       abortProcess = true;
       addLogLine("[Fatal] Process cancelled by user. Terminating...", "#ef4444");
@@ -339,100 +317,75 @@
   function minimizeToBackground() { document.getElementById('log-overlay').classList.remove('active'); document.getElementById('floating-log-btn').style.display = 'block'; }
   function restoreTerminal() { document.getElementById('log-overlay').classList.add('active'); document.getElementById('floating-log-btn').style.display = 'none'; }
 
- document.getElementById("botPipelineForm").addEventListener("submit", async function (e) {
+  document.getElementById("botPipelineForm").addEventListener("submit", async function (e) {
     e.preventDefault();
     const btn = document.getElementById('final-create-btn'), nameInput = document.getElementById('bot_name');
     if (!nameInput.value.trim()) { switchCbTab('tab-ui'); nameInput.focus(); alert("Please enter a Chatbot Name in the User Interface tab."); return; }
-
     btn.innerText = "Initializing Engine..."; btn.disabled = true;
-
     const formData = new FormData(this);
     formData.delete('file');
     globalAttachedFiles.forEach(item => { formData.append('file', item.fileObj); });
-    
     formData.delete('text_snippets_data');
     if (globalTextSnippets.length > 0) {
       formData.append('text_snippets_data', JSON.stringify(globalTextSnippets));
     }
-    
     formData.delete('scrape_url');
     formData.delete('use_deep_crawl');
     formData.delete('max_urls');
-
     document.getElementById('log-overlay').classList.add('active');
     document.getElementById('floating-log-btn').style.display = 'none';
     permanentLogs = []; currentScrapeLogs = ""; abortProcess = false; createdBotId = null;
-    
     addLogLine("Establishing secure connection to BotFactory...", "#10b981");
     addLogLine("Initializing Bot Agent...", "#38bdf8");
-
-    // ==============================================================
-    // 1. SMART OPTIMISTIC LOGGING (THE "FAKE" QUEUE)
-    // ==============================================================
-    let fakeLogQueue = [];
-    globalAttachedFiles.forEach(item => fakeLogQueue.push(`[File] Uploading & Vectorizing: ${item.fileObj.name}`));
-    globalTextSnippets.forEach(item => fakeLogQueue.push(`[Text] Encoding snippet: ${item.title}`));
+    let fakeLogQueue = [
+        "Allocating memory structure...",
+        "Validating environment configurations..."
+    ];
+    globalAttachedFiles.forEach(item => fakeLogQueue.push(`[File] Transferring & Vectorizing: ${item.fileObj.name}`));
+    globalTextSnippets.forEach(item => fakeLogQueue.push(`[Text] Encoding text snippet: ${item.title}`));
     const qaInput = document.getElementById('qa_input');
     if (qaInput && qaInput.value.trim()) fakeLogQueue.push(`[Q&A] Processing custom knowledge pairs`);
-
-    // Print one log every 1.8 seconds to keep the user entertained
+    fakeLogQueue.push("Finalizing API handshake...");
     let fakeLogInterval = setInterval(() => {
         if (fakeLogQueue.length > 0) {
-            addLogLine(fakeLogQueue.shift(), "#f59e0b"); // Yellow processing color
+            addLogLine(fakeLogQueue.shift(), "#f59e0b");
         }
-    }, 1800); 
-    // ==============================================================
-
+    }, 800);
     try {
       const response = await fetch("{{ url_for('admin_bp.create_pipeline') }}", { method: "POST", body: formData, headers: { "X-Requested-With": "XMLHttpRequest" }});
       const data = await response.json();
-
-      // ==============================================================
-      // 2. BACKEND RESPONDED - STOP THE FAKE WAITING INSTANTLY
-      // ==============================================================
       clearInterval(fakeLogInterval);
-      
-      // If there are still files in the queue, dump them instantly so we don't delay the scraper
       while(fakeLogQueue.length > 0) {
           addLogLine(fakeLogQueue.shift() + " - Done", "#10b981"); 
       }
-      // ==============================================================
-
       if (data.success) {
           createdBotId = data.bot_id;
-          
           if (data.logs && data.logs.length > 0) {
               data.logs.forEach(log => {
                   if (log.includes("[Error]")) addLogLine(log, "#ef4444");
+                  else addLogLine(log, "#10b981");
               });
           }
-
           addLogLine(`Bot successfully initialized in database (ID: ${createdBotId}).`, "#38bdf8");
-          
           if (globalLinks.length > 0 && !abortProcess) {
               addLogLine(`Found ${globalLinks.length} root web source(s). Initiating Scrape Workers...`, "#f59e0b");
-              
               for (let i = 0; i < globalLinks.length; i++) {
                   if (abortProcess) break;
                   const link = globalLinks[i];
                   addLogLine(`\n[Scraper] Starting job for: ${link.url}`);
-                  
                   const scrapeRes = await fetch("{{ url_for('admin_bp.start_scrape') }}", {
                       method: 'POST',
                       headers: {'Content-Type': 'application/json'},
                       body: JSON.stringify({ url: link.url, use_spider: link.isDeep, max_urls: link.maxPages })
                   });
                   const scrapeData = await scrapeRes.json();
-                  
                   if(scrapeData.job_id) {
                       await new Promise((resolve) => {
                           const poll = setInterval(async () => {
                               if (abortProcess) { clearInterval(poll); resolve(); return; }
                               const sRes = await fetch(`/admin/api/scrape/status/${scrapeData.job_id}`);
                               const sData = await sRes.json();
-                              
                               updateScrapeLogs(sData.logs);
-                              
                               if(sData.status === 'completed' || sData.status === 'failed') {
                                   clearInterval(poll);
                                   updateScrapeLogs("");
@@ -445,7 +398,6 @@
                   }
               }
           }
-          
           if (!abortProcess) {
               addLogLine("\nVectors synchronized. Agent deployed successfully.", "#10b981");
               addLogLine("Redirecting to Dashboard...", "#10b981");
