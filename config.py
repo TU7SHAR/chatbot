@@ -14,6 +14,8 @@ class Config:
     SCRAPE_FOLDER = os.path.join(basedir, 'scraped_docs') 
     # HOST_URL = os.getenv('HOST_URL', 'https://chatbot-c53nl.ondigitalocean.app/')
     HOST_URL = os.getenv('HOST_URL', 'https://chatbot-c53nl.ondigitalocean.app/')
+    SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL')
+    OFFICE_LOCATION = os.getenv('OFFICE_LOCATION')
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  
     ALLOWED_EXTENSIONS = {'txt', 'doc', 'docx', 'xls', 'xlsx', 'md', 'html', 'pdf'}
     

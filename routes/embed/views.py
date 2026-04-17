@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, make_response, jsonify
 from models.models import Bot, User, db
+from utils.mail_helper import is_valid_email, send_contact_email, send_auto_reply
 
 views_bp = Blueprint('views_bp', __name__)
 
@@ -22,6 +23,42 @@ def compare(competitor=None):
         else:
             return redirect(url_for('views_bp.compare'))
     return render_template('compare.html')
+
+@views_bp.route('/contact', methods=['GET', 'POST'])
+def contact():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        raw_email = request.form.get('email', '').strip()
+        subject = request.form.get('subject', '').strip()
+        message = request.form.get('message', '').strip()
+
+        # 1. Advanced Validation Check
+        is_valid, validation_result = is_valid_email(raw_email)
+        
+        if not is_valid:
+            flash(f"Invalid email: {validation_result}", "error")
+            return redirect(url_for('views_bp.contact'))
+            
+        safe_email = validation_result 
+
+        if not name or not message:
+            flash("Name and message fields are required.", "error")
+            return redirect(url_for('views_bp.contact'))
+
+        # 2. Send the alert to YOUR support team
+        admin_notified = send_contact_email(name, safe_email, subject, message)
+        
+        # 3. If your team got the alert, send the auto-reply to the USER
+        if admin_notified:
+            # We trigger the auto-reply silently (no need to crash if it fails)
+            send_auto_reply(name, safe_email)
+            flash("Your message has been sent successfully! Check your inbox for a confirmation.", "success")
+        else:
+            flash("An internal error occurred while sending your message. Please try again later.", "error")
+            
+        return redirect(url_for('views_bp.contact'))
+
+    return render_template('contact.html')
 
 @views_bp.route('/dashboard')
 def dashboard():

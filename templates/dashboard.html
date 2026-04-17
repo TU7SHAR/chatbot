@@ -44,7 +44,7 @@
                     <button class="dots-btn" onclick="toggleBotMenu(event, 'menu-{{ bot.id }}')">⋮</button>
                     <div class="dropdown-window" id="menu-{{ bot.id }}">
                         <a href="{{ url_for('admin_bp.edit_bot', bot_id=bot.id) }}">Edit Bot</a>
-                        <button type="button" style="width: 100%; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 700; background: transparent; border: none; cursor: pointer; color: #ef4444; " onclick="confirmDelete(event, {{ bot.id }}, '{{ bot.bot_name }}')">Delete</button>
+                        <button type="button" style="width: 100%; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 700; background: transparent; border: none; cursor: pointer; color: #ef4444; " onclick='confirmDelete(event, {{ bot.id }}, {{ bot.bot_name | tojson | safe }})'>Delete</button>
                     </div>
                 </div>
             </div>

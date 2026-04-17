@@ -1,4 +1,0 @@
-sql vs NoSQL
-stored procedure 
-functions in sql server
-difference between stored procedure and functions

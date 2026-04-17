@@ -1,14 +1,116 @@
-import os
+import os, re
 import random
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+from email_validator import validate_email, EmailNotValidError
 
 load_dotenv()
 
 EMAIL_ADDRESS = os.environ.get("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
+
+def is_valid_email(email):
+    """
+    Checks syntax and deliverability (MX records) of an email.
+    Returns: (is_valid: bool, result: str)
+    If valid, result is the normalized email.
+    If invalid, result is the human-readable error message.
+    """
+    try:
+        valid = validate_email(email, check_deliverability=True)
+        return True, valid.normalized
+        
+    except EmailNotValidError as e:
+        return False, str(e)
+
+def send_contact_email(sender_name, sender_email, subject, message):
+    """
+    Sends the contact form data to your support email via SMTP.
+    """
+    smtp_server = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    smtp_port = int(os.getenv('MAIL_PORT', 587))
+    smtp_user = os.getenv('EMAIL_ADDRESS')
+    smtp_password = os.getenv('EMAIL_PASSWORD')    
+    support_email = os.getenv('SUPPORT_EMAIL', smtp_user) 
+
+    # Create the email structure
+    msg = MIMEMultipart()
+    msg['From'] = smtp_user
+    msg['To'] = support_email
+    msg['Subject'] = f"New Contact Request: {subject}"
+    
+    # Format the body to look professional
+    body = f"""
+You have received a new message from your platform's contact form.
+
+Details:
+----------------------------------------
+Name: {sender_name}
+Email: {sender_email}
+Subject: {subject}
+----------------------------------------
+
+Message:
+{message}
+"""
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        # Establish a secure connection and send
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls() # Secure the connection
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"SMTP Error sending contact email: {e}")
+        return False
+
+def send_auto_reply(user_name, user_email):
+    """
+    Sends a professional automated acknowledgment email back to the user.
+    """
+    smtp_server = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    smtp_port = int(os.getenv('MAIL_PORT', 587))
+    smtp_user = os.getenv('EMAIL_ADDRESS')
+    smtp_password = os.getenv('EMAIL_PASSWORD')
+    
+    platform_name = "Chat.bot Support Team" 
+
+    msg = MIMEMultipart()
+    msg['From'] = f"{platform_name} <{smtp_user}>"
+    msg['To'] = user_email
+    msg['Subject'] = "We've received your message!"
+    
+    body = f"""Hi {user_name},
+
+Thank you for reaching out to us! 
+
+This is an automated response to let you know that we have successfully received your message. Our support team is reviewing your inquiry and will get back to you as soon as possible (usually within 24 hours).
+
+For your records, here is a copy of the information you submitted:
+Email: {user_email}
+
+If you have any additional details to add, feel free to reply directly to this email.
+
+Best regards,
+The {platform_name}
+"""
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"SMTP Error sending auto-reply: {e}")
+        return False
 
 def send_invite_email(target_email, user_name, plain_password):
     subject = "You've been invited to chat.bot"

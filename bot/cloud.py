@@ -1,6 +1,8 @@
 import os
+import time
 from dotenv import load_dotenv
 from google import genai
+
 load_dotenv()
 
 def get_gemini_client():
@@ -23,26 +25,39 @@ def create_dynamic_store(bot_name):
         return None
 
 def upload_to_gemini(file_path, target_store_id):
-    """for uploading file on genai store"""
+    """Uploads and indexes a file directly into a Gemini vector store"""
     try:
         client = get_gemini_client()
-        client.file_search_stores.upload_to_file_search_store(
+        print(f"Initiating Gemini upload for: {file_path}")
+        
+        operation = client.file_search_stores.upload_to_file_search_store(
             file=file_path,
             file_search_store_name=target_store_id
         )
-        print(f"File Uploaded on Gemini Store: {file_path}")
+        
+        print("Waiting for Google servers to process and index document...")
+        while not operation.done:
+            time.sleep(5)
+            operation = client.operations.get(operation)
+            print("...still indexing...")
+            
+        print(f" Document ACTIVE and searchable: {file_path}")
 
     except Exception as e: 
-        print(f"Error Uploading Gemini: {e}")
-
+        print(f" Gemini Upload Error: {e}")
+        raise e    
+  
 def delete_from_gemini(l_filename):
-    """finds file from genaistore and deletes it"""
+    """Finds file from general storage and deletes it safely"""
     try:
         client = get_gemini_client()
-        print(f"Searching for filename: {l_filename}")
+        print(f"Searching for filename to delete: {l_filename}")
+        
         for g_file in client.files.list():
             if g_file.display_name == l_filename:
-                client.files.delete(name=g_file.name)
-                print(f"File Deleted: {l_filename}")
-    except Exception as e: 
-          print(f"Error deleting from Gemini: {e}")
+                # Pass the object directly to avoid the keyword bug here too
+                client.files.delete(g_file)
+                print(f"Deleted global file: {l_filename}")
+
+    except Exception as e:
+        print(f"Error deleting file: {e}")
